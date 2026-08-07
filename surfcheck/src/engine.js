@@ -15,13 +15,41 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export const tideStage = n => (n < 0.3 ? 'low' : n > 0.7 ? 'high' : 'mid');
 
+// How much of the open-ocean swell reaches this beach's lineup (0–1),
+// from base exposure and how far the swell angle sits off the beach's best direction.
+export function exposure(beach, hr) {
+  const dd = angDiff(hr.swellDir, beach.bestDir);
+  const falloff = Math.max(0, 1 - (dd / beach.dirWidth) ** 2);
+  return beach.expoBase * falloff;
+}
+
+// Estimated breaking-face height (trough to lip, what you eyeball from the sand).
+// Komar & Gaughan (1972): Hb = 0.39 g^(1/5) (T·H0²)^(2/5), fed with the swell that
+// actually reaches the lineup. Rayleigh wave-height stats give the session range:
+// typical waves ≈ 0.7×Hb, bigger sets ≈ 1.3×Hb.
+export function faceHeight(beach, hr) {
+  const h0 = hr.swellH * exposure(beach, hr);
+  if (h0 < 0.05) return { lo: 0, hi: 0 };
+  const hb = 0.39 * 9.81 ** 0.2 * (hr.swellP * h0 * h0) ** 0.4;
+  return { lo: hb * 0.7, hi: hb * 1.3 };
+}
+
+// Body-relative label, judged on the set waves (the ones that decide if you paddle out).
+export const faceLabel = hi =>
+  hi < 0.3 ? 'flat' :
+  hi < 0.6 ? 'ankle–knee' :
+  hi < 0.9 ? 'knee–waist' :
+  hi < 1.2 ? 'waist–chest' :
+  hi < 1.5 ? 'chest–shoulder' :
+  hi < 1.9 ? 'head high' :
+  hi < 2.4 ? 'overhead' :
+  hi < 3.2 ? 'well overhead' : 'double overhead+';
+
 // ---- Score (weights per handoff: wind .35, size .20, direction .25, period .10, tide .10)
 export function scoreHour(beach, hr, skillName) {
   const s = SKILLS[skillName];
   const eff = hr.swellH * Math.sqrt(hr.swellP / 10); // period-weighted effective height
-  const dd = angDiff(hr.swellDir, beach.bestDir);
-  const falloff = Math.max(0, 1 - (dd / beach.dirWidth) ** 2);
-  const expo = beach.expoBase * falloff;
+  const expo = exposure(beach, hr);
   const breakH = eff * expo;
   const offDir = (beach.facing + 180) % 360;
   const wd = angDiff(hr.windDir, offDir);
@@ -117,10 +145,12 @@ export function buildModel(datasets, skillName, nowT, baseDate) {
         if (t >= hours.length) break;
         const hh = hours[t];
         const s2 = scoreHour(b, hh, skillName);
+        const f2 = faceHeight(b, hh);
         hrs.push({
           h, score: s2.score,
           swellH: hh.swellH, swellP: hh.swellP, swellDir: hh.swellDir,
           windSpd: hh.windSpd, windDir: hh.windDir, tideN: hh.tideN,
+          faceLo: f2.lo, faceHi: f2.hi,
         });
         if (h >= Math.floor(sr) && h <= Math.ceil(ss)) {
           best = Math.max(best, s2.score);
@@ -144,6 +174,7 @@ export function buildModel(datasets, skillName, nowT, baseDate) {
     return {
       id: b.id, name: b.name, notes: b.notes, cams: b.cams, sst,
       score: sc.score, label: scoreLabel(sc.score), why: whyLine(b, hr, sc, rising),
+      face: (() => { const f = faceHeight(b, hr); return { ...f, label: faceLabel(f.hi) }; })(),
       swell: { h: hr.swellH, p: hr.swellP, dirFrom: hr.swellDir, going: (hr.swellDir + 180) % 360 },
       wind: { spd: hr.windSpd, dirFrom: hr.windDir, going: (hr.windDir + 180) % 360, tag: sc.windTag },
       tide: {

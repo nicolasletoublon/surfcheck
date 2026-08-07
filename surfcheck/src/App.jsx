@@ -114,6 +114,9 @@ function ChartTip({ active, payload }) {
         <span>{fmtClock(p.h)}</span>
         <span style={{ color: LABEL_COLOR[label] }}>{p.score.toFixed(1)} · {label}</span>
       </div>
+      {p.faceHi >= 0.3 && (
+        <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-sand)' }} />faces {p.faceLo.toFixed(1)}–{p.faceHi.toFixed(1)} m</div>
+      )}
       <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-teal)' }} />swell {p.swellH.toFixed(1)} m · {Math.round(p.swellP)} s {compass(p.swellDir)}</div>
       <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-coral)' }} />wind {Math.round(p.windSpd)} kn {compass(p.windDir)}</div>
       <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-soft)' }} />{tideStage(p.tideN)} tide</div>
@@ -214,6 +217,11 @@ const tideText = t => {
 function StatsRow({ b }) {
   return (
     <div className="dp-stats">
+      <div className="dp-stat dp-stat-face">
+        {b.face.hi < 0.3
+          ? <span>faces: flat</span>
+          : <span>faces {b.face.lo.toFixed(1)}–{b.face.hi.toFixed(1)} m · {b.face.label}</span>}
+      </div>
       <div className="dp-stat">
         <Arrow deg={b.swell.going} color="var(--dp-teal)" />
         <span>{b.swell.h.toFixed(1)} m · {Math.round(b.swell.p)} s {compass(b.swell.dirFrom)}</span>

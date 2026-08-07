@@ -102,6 +102,7 @@ button { font-family: 'Figtree', sans-serif; }
 .dp-stats { display: flex; flex-wrap: wrap; gap: 6px; }
 .dp-stat { display: flex; align-items: center; gap: 6px; background: var(--dp-card2); border-radius: 10px; padding: 5px 9px; font-size: 12.5px; font-weight: 500; }
 .dp-stat svg { flex-shrink: 0; }
+.dp-stat-face { background: var(--dp-tag-cross-bg); color: var(--dp-sand); font-weight: 600; }
 .dp-tag-offshore { background: var(--dp-tag-off-bg); color: var(--dp-teal); }
 .dp-tag-cross-shore { background: var(--dp-tag-cross-bg); color: var(--dp-sand); }
 .dp-tag-onshore { background: var(--dp-tag-on-bg); color: var(--dp-coral); }
