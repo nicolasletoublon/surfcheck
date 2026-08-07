@@ -117,7 +117,11 @@ export function buildModel(datasets, skillName, nowT, baseDate) {
         if (t >= hours.length) break;
         const hh = hours[t];
         const s2 = scoreHour(b, hh, skillName);
-        hrs.push({ h, swellH: hh.swellH, windSpd: hh.windSpd, tideN: hh.tideN, score: s2.score });
+        hrs.push({
+          h, score: s2.score,
+          swellH: hh.swellH, swellP: hh.swellP, swellDir: hh.swellDir,
+          windSpd: hh.windSpd, windDir: hh.windDir, tideN: hh.tideN,
+        });
         if (h >= Math.floor(sr) && h <= Math.ceil(ss)) {
           best = Math.max(best, s2.score);
           swMin = Math.min(swMin, hh.swellH);
@@ -138,7 +142,7 @@ export function buildModel(datasets, skillName, nowT, baseDate) {
       hourly.push(hrs);
     }
     return {
-      id: b.id, name: b.name, notes: b.notes, webcam: b.webcam, sst,
+      id: b.id, name: b.name, notes: b.notes, cams: b.cams, sst,
       score: sc.score, label: scoreLabel(sc.score), why: whyLine(b, hr, sc, rising),
       swell: { h: hr.swellH, p: hr.swellP, dirFrom: hr.swellDir, going: (hr.swellDir + 180) % 360 },
       wind: { spd: hr.windSpd, dirFrom: hr.windDir, going: (hr.windDir + 180) % 360, tag: sc.windTag },

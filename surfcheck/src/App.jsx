@@ -1,12 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
+import {
+  Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts';
 import { BEACHES, SKILL_NAMES, SKILLS } from './beaches.js';
-import { buildModel, compass, fmtClock, wetsuit } from './engine.js';
+import { buildModel, compass, fmtClock, scoreLabel, tideStage, wetsuit } from './engine.js';
 import { fetchBeach, sydneyNow } from './api.js';
 
 const LABEL_COLOR = {
   Flat: 'var(--dp-flat)', Poor: 'var(--dp-poor)', Fair: 'var(--dp-amber)',
   Good: 'var(--dp-green)', Firing: 'var(--dp-coral)',
 };
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = e => setMatches(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
 
 function ScoreNum({ score, label, size }) {
   return (
@@ -65,50 +80,148 @@ function goodRanges(hours) {
   return ranges;
 }
 
-function Chart({ hours, isToday, nowT }) {
-  const L = 30, R = 352, T = 12, B = 126;
-  const x = i => L + ((R - L) * i) / 23;
-  const ySw = v => B - ((B - T) * Math.min(v, 2.5)) / 2.5;
-  const yW = v => B - ((B - T) * Math.min(v, 25)) / 25;
-  const yT = n => B - (B - T) * n; // tide is pre-normalised 0–1
-  const line = (f, k) => hours.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${f(p[k]).toFixed(1)}`).join(' ');
-  const swellLine = line(ySw, 'swellH');
-  const grid = [1, 2].map(m => ({ y: ySw(m), txt: `${m} m` }));
-  const xlabels = [0, 6, 12, 18, 23].map(i => ({ x: x(i), txt: i === 23 ? '11 pm' : fmtClock(i) }));
-  const nowX = isToday && nowT != null ? x(Math.min(23, Math.max(0, nowT))) : null;
+function ChartTip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0].payload;
+  const label = scoreLabel(p.score);
   return (
-    <svg className="dp-chart-svg" viewBox="0 0 360 150">
-      {goodRanges(hours).map(([a, b]) => (
-        <rect key={a} x={x(a)} y={T} width={Math.max(0, x(b) - x(a))} height={B - T} fill="var(--dp-green)" fillOpacity="0.14" />
+    <div className="dp-tip">
+      <div className="dp-tip-head">
+        <span>{fmtClock(p.h)}</span>
+        <span style={{ color: LABEL_COLOR[label] }}>{p.score.toFixed(1)} · {label}</span>
+      </div>
+      <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-teal)' }} />swell {p.swellH.toFixed(1)} m · {Math.round(p.swellP)} s {compass(p.swellDir)}</div>
+      <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-coral)' }} />wind {Math.round(p.windSpd)} kn {compass(p.windDir)}</div>
+      <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-soft)' }} />{tideStage(p.tideN)} tide</div>
+    </div>
+  );
+}
+
+function HourlyChart({ hours, isToday, nowT }) {
+  return (
+    <ResponsiveContainer width="100%" height={190}>
+      <ComposedChart data={hours} margin={{ top: 16, right: 8, bottom: 0, left: -6 }}>
+        {goodRanges(hours).map(([a, b]) => (
+          <ReferenceArea key={a} yAxisId="m" x1={a} x2={Math.min(23, b)} fill="var(--dp-green)" fillOpacity={0.13} />
+        ))}
+        <CartesianGrid vertical={false} stroke="var(--dp-line)" />
+        <XAxis
+          dataKey="h" type="number" domain={[0, 23]} ticks={[0, 6, 12, 18, 23]}
+          tickFormatter={h => (h === 23 ? '11 pm' : fmtClock(h))}
+          tick={{ fontSize: 10, fill: 'var(--dp-soft)' }} axisLine={false} tickLine={false}
+        />
+        <YAxis
+          yAxisId="m" domain={[0, dataMax => Math.max(2.5, Math.ceil(dataMax))]} allowDecimals={false}
+          tickFormatter={v => (v ? `${v} m` : '')}
+          tick={{ fontSize: 10, fill: 'var(--dp-soft)' }} axisLine={false} tickLine={false} width={44}
+        />
+        <YAxis yAxisId="kn" orientation="right" domain={[0, dataMax => Math.max(25, dataMax)]} hide />
+        <YAxis yAxisId="n" domain={[0, 1]} hide />
+        <Tooltip content={<ChartTip />} cursor={{ stroke: 'var(--dp-soft)', strokeDasharray: '3 3' }} />
+        <Area yAxisId="n" dataKey="tideN" stroke="none" fill="var(--dp-soft)" fillOpacity={0.13} isAnimationActive={false} />
+        <Area
+          yAxisId="m" dataKey="swellH" stroke="var(--dp-teal)" strokeWidth={2.2}
+          fill="var(--dp-teal)" fillOpacity={0.2} isAnimationActive={false}
+          activeDot={{ r: 3.5, strokeWidth: 0, fill: 'var(--dp-teal)' }}
+        />
+        <Line
+          yAxisId="kn" dataKey="windSpd" stroke="var(--dp-coral)" strokeWidth={1.8}
+          strokeDasharray="4 4" dot={false} isAnimationActive={false}
+          activeDot={{ r: 3, strokeWidth: 0, fill: 'var(--dp-coral)' }}
+        />
+        {isToday && nowT != null && (
+          <ReferenceLine
+            yAxisId="m" x={Math.min(23, Math.max(0, nowT))}
+            stroke="var(--dp-coral)" strokeWidth={1.4} strokeDasharray="2 2"
+            label={{ value: 'NOW', position: 'top', fill: 'var(--dp-coral)', fontSize: 9, fontWeight: 700 }}
+          />
+        )}
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
+function ChartCard({ b, day, nowT }) {
+  return (
+    <div className="dp-chart-card">
+      <div className="dp-chart-head">
+        <div className="dp-chart-title">{b.days[day]?.lbl ?? ''} · hourly</div>
+        <div className="dp-legend">
+          <span><span className="dp-dot" style={{ background: 'var(--dp-teal)' }} />swell m</span>
+          <span><span className="dp-dot" style={{ background: 'var(--dp-coral)' }} />wind kn</span>
+          <span><span className="dp-dot" style={{ background: 'var(--dp-soft)' }} />tide</span>
+          <span><span className="dp-dot" style={{ background: 'var(--dp-green)' }} />good window</span>
+        </div>
+      </div>
+      <HourlyChart hours={b.hourly[day] ?? []} isToday={day === 0} nowT={nowT} />
+    </div>
+  );
+}
+
+function DayPills({ days, day, setDay }) {
+  return (
+    <div className="dp-days">
+      {days.map(d => (
+        <button key={d.d} className={`dp-day ${d.d === day ? 'on' : ''}`} onClick={() => setDay(d.d)}>
+          <span className="dp-day-lbl">{d.lbl}</span>
+          <span className="dp-day-score" style={{ color: LABEL_COLOR[d.label] }}>{d.best.toFixed(1)}</span>
+          <span className="dp-day-sw">{d.swMin.toFixed(1)}–{d.swMax.toFixed(1)} m</span>
+          <span className="dp-day-wind">{d.windLbl}</span>
+        </button>
       ))}
-      {grid.map(g => (
-        <g key={g.txt}>
-          <line x1={L} x2={R} y1={g.y} y2={g.y} stroke="var(--dp-line)" strokeWidth="1" />
-          <text x={L - 4} y={g.y + 3} textAnchor="end" fontSize="9" fill="var(--dp-soft)">{g.txt}</text>
-        </g>
-      ))}
-      <path d={`${line(yT, 'tideN')} L${R} ${B} L${L} ${B} Z`} fill="var(--dp-soft)" fillOpacity="0.13" />
-      <path d={`${swellLine} L${R} ${B} L${L} ${B} Z`} fill="var(--dp-teal)" fillOpacity="0.22" />
-      <path d={swellLine} stroke="var(--dp-teal)" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-      <path d={line(yW, 'windSpd')} stroke="var(--dp-coral)" strokeWidth="1.8" fill="none" strokeDasharray="4 4" strokeLinecap="round" />
-      {xlabels.map(xl => (
-        <text key={xl.txt} x={xl.x} y="144" textAnchor="middle" fontSize="9" fill="var(--dp-soft)">{xl.txt}</text>
-      ))}
-      {nowX != null && (
-        <g>
-          <line x1={nowX} x2={nowX} y1={T} y2={B} stroke="var(--dp-coral)" strokeWidth="1.4" strokeDasharray="2 2" />
-          <circle cx={nowX} cy={T} r="2.5" fill="var(--dp-coral)" />
-          <text x={nowX} y={T - 3} textAnchor="middle" fontSize="8" fontWeight="700" fill="var(--dp-coral)">NOW</text>
-        </g>
-      )}
-    </svg>
+    </div>
+  );
+}
+
+const tideText = t => {
+  const stage = `${t.stage[0].toUpperCase() + t.stage.slice(1)} tide ${t.rising ? 'rising' : 'falling'}`;
+  return t.nextKind ? `${stage} · ${t.nextKind} ${fmtClock(t.nextT % 24)}` : stage;
+};
+
+function StatsRow({ b }) {
+  return (
+    <div className="dp-stats">
+      <div className="dp-stat">
+        <Arrow deg={b.swell.going} color="var(--dp-teal)" />
+        <span>{b.swell.h.toFixed(1)} m · {Math.round(b.swell.p)} s {compass(b.swell.dirFrom)}</span>
+      </div>
+      <div className="dp-stat">
+        <Arrow deg={b.wind.going} color="var(--dp-coral)" />
+        <span>{Math.round(b.wind.spd)} kn {compass(b.wind.dirFrom)}</span>
+        <span className={`dp-chip dp-tag-${b.wind.tag}`}>{b.wind.tag.toUpperCase()}</span>
+      </div>
+      <div className="dp-stat">{tideText(b.tide)}</div>
+    </div>
+  );
+}
+
+function Extras({ b, day }) {
+  const sun = b.sun[Math.min(day, b.sun.length - 1)];
+  return (
+    <div className="dp-extras">
+      <div className="dp-extra">
+        <div className="dp-extra-eyebrow">WATER</div>
+        <div className="dp-extra-big">{b.sst.toFixed(1)}°C</div>
+        <div className="dp-extra-small">{wetsuit(b.sst)}</div>
+      </div>
+      <div className="dp-extra">
+        <div className="dp-extra-eyebrow">FIRST LIGHT</div>
+        <div className="dp-extra-big">{fmtClock(sun.sr - 25 / 60)}</div>
+        <div className="dp-extra-small">sunrise {fmtClock(sun.sr)}</div>
+      </div>
+      <div className="dp-extra">
+        <div className="dp-extra-eyebrow">SURFCAMS</div>
+        <div className="dp-cams">
+          {b.cams.map(c => (
+            <a key={c.url + c.label} href={c.url} target="_blank" rel="noreferrer">{c.label} →</a>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
 function BeachCard({ b, fav, onToggleFav, onOpen }) {
-  const tideTxt = b.tide.nextKind
-    ? `${b.tide.stage[0].toUpperCase() + b.tide.stage.slice(1)} tide ${b.tide.rising ? 'rising' : 'falling'} · ${b.tide.nextKind} ${fmtClock(b.tide.nextT % 24)}`
-    : `${b.tide.stage[0].toUpperCase() + b.tide.stage.slice(1)} tide ${b.tide.rising ? 'rising' : 'falling'}`;
   return (
     <article className="dp-card" onClick={onOpen}>
       <div className="dp-card-score">
@@ -126,26 +239,42 @@ function BeachCard({ b, fav, onToggleFav, onOpen }) {
             <div className="dp-chev">›</div>
           </div>
         </div>
-        <div className="dp-stats">
-          <div className="dp-stat">
-            <Arrow deg={b.swell.going} color="var(--dp-teal)" />
-            <span>{b.swell.h.toFixed(1)} m · {Math.round(b.swell.p)} s {compass(b.swell.dirFrom)}</span>
-          </div>
-          <div className="dp-stat">
-            <Arrow deg={b.wind.going} color="var(--dp-coral)" />
-            <span>{Math.round(b.wind.spd)} kn {compass(b.wind.dirFrom)}</span>
-            <span className={`dp-chip dp-tag-${b.wind.tag}`}>{b.wind.tag.toUpperCase()}</span>
-          </div>
-          <div className="dp-stat">{tideTxt}</div>
-        </div>
+        <StatsRow b={b} />
         <div className="dp-why">{b.why}</div>
       </div>
     </article>
   );
 }
 
+// Desktop: an always-expanded card with everything the sheet shows, no click needed.
+function BeachPanel({ b, fav, onToggleFav, nowT }) {
+  const [day, setDay] = useState(0);
+  return (
+    <section className="dp-panel">
+      <div className="dp-panel-head">
+        <div className="dp-panel-title">
+          <div className="dp-card-name-left">
+            <div className="dp-sheet-name">{b.name}</div>
+            {fav && <span className="dp-chip dp-chip-pinned">PINNED</span>}
+            <Star pinned={fav} onClick={onToggleFav} />
+          </div>
+          <div className="dp-sheet-why">{b.why}</div>
+        </div>
+        <div className="dp-scorecol">
+          <ScoreNum score={b.score} label={b.label} size={44} />
+          <div className="dp-scorelbl" style={{ color: LABEL_COLOR[b.label] }}>{b.label}</div>
+        </div>
+      </div>
+      <StatsRow b={b} />
+      <DayPills days={b.days} day={day} setDay={setDay} />
+      <ChartCard b={b} day={day} nowT={nowT} />
+      <Extras b={b} day={day} />
+      <div className="dp-sheet-notes">{b.notes}</div>
+    </section>
+  );
+}
+
 function Sheet({ b, day, setDay, onClose, nowT }) {
-  const sun = b.sun[Math.min(day, b.sun.length - 1)];
   return (
     <>
       <div className="dp-scrim" onClick={onClose} />
@@ -161,45 +290,9 @@ function Sheet({ b, day, setDay, onClose, nowT }) {
             <div className="dp-scorelbl" style={{ color: LABEL_COLOR[b.label] }}>{b.label}</div>
           </div>
         </div>
-        <div className="dp-days">
-          {b.days.map(d => (
-            <button key={d.d} className={`dp-day ${d.d === day ? 'on' : ''}`} onClick={() => setDay(d.d)}>
-              <span className="dp-day-lbl">{d.lbl}</span>
-              <span className="dp-day-score" style={{ color: LABEL_COLOR[d.label] }}>{d.best.toFixed(1)}</span>
-              <span className="dp-day-sw">{d.swMin.toFixed(1)}–{d.swMax.toFixed(1)} m</span>
-              <span className="dp-day-wind">{d.windLbl}</span>
-            </button>
-          ))}
-        </div>
-        <div className="dp-chart-card">
-          <div className="dp-chart-head">
-            <div className="dp-chart-title">{b.days[day]?.lbl ?? ''} · hourly</div>
-            <div className="dp-legend">
-              <span><span className="dp-dot" style={{ background: 'var(--dp-teal)' }} />swell m</span>
-              <span><span className="dp-dot" style={{ background: 'var(--dp-coral)' }} />wind kn</span>
-              <span><span className="dp-dot" style={{ background: 'var(--dp-soft)' }} />tide</span>
-              <span><span className="dp-dot" style={{ background: 'var(--dp-green)' }} />good window</span>
-            </div>
-          </div>
-          <Chart hours={b.hourly[day] ?? []} isToday={day === 0} nowT={nowT} />
-        </div>
-        <div className="dp-extras">
-          <div className="dp-extra">
-            <div className="dp-extra-eyebrow">WATER</div>
-            <div className="dp-extra-big">{b.sst.toFixed(1)}°C</div>
-            <div className="dp-extra-small">{wetsuit(b.sst)}</div>
-          </div>
-          <div className="dp-extra">
-            <div className="dp-extra-eyebrow">FIRST LIGHT</div>
-            <div className="dp-extra-big">{fmtClock(sun.sr - 25 / 60)}</div>
-            <div className="dp-extra-small">sunrise {fmtClock(sun.sr)}</div>
-          </div>
-          <div className="dp-extra">
-            <div className="dp-extra-eyebrow">SURFCAM</div>
-            <a href={b.webcam} target="_blank" rel="noreferrer">Swellnet cam →</a>
-            <div className="dp-extra-small">opens in new tab</div>
-          </div>
-        </div>
+        <DayPills days={b.days} day={day} setDay={setDay} />
+        <ChartCard b={b} day={day} nowT={nowT} />
+        <Extras b={b} day={day} />
         <div className="dp-sheet-notes">{b.notes}</div>
       </div>
     </>
@@ -216,6 +309,7 @@ export default function App() {
   const [day, setDay] = useState(0);
   const [data, setData] = useState({});   // beachId -> { status, dataset?, error? }
   const [, setTick] = useState(0);        // re-render each minute for "updated X min ago" / now-hour rollover
+  const isDesktop = useMediaQuery('(min-width: 1000px)');
 
   const load = (only = null) => {
     const targets = only ? BEACHES.filter(b => b.id === only) : BEACHES;
@@ -248,6 +342,12 @@ export default function App() {
     ? [...model.beaches].sort((a, b) => (favs.includes(b.id) - favs.includes(a.id)) || (b.score - a.score))
     : [];
   const { nowT } = sydneyNow();
+
+  // Desktop: favourites expand into full panels at the top (top 2 by score if nothing pinned).
+  const featured = isDesktop
+    ? (favs.length ? ranked.filter(b => favs.includes(b.id)) : ranked.slice(0, 2))
+    : [];
+  const compact = ranked.filter(b => !featured.some(f => f.id === b.id));
   const sheetBeach = model && sheetId ? model.beaches.find(b => b.id === sheetId) : null;
 
   const newest = Math.max(0, ...ready.map(b => data[b.id].dataset.fetchedAt ?? 0));
@@ -294,8 +394,16 @@ export default function App() {
           </div>
         )}
 
-        <main className="dp-main">
-          {ranked.map(b => (
+        {featured.length > 0 && (
+          <section className="dp-panels">
+            {featured.map(b => (
+              <BeachPanel key={b.id} b={b} fav={favs.includes(b.id)} onToggleFav={() => toggleFav(b.id)} nowT={nowT} />
+            ))}
+          </section>
+        )}
+
+        <main className={`dp-main ${isDesktop ? 'dp-main-grid' : ''}`}>
+          {compact.map(b => (
             <BeachCard
               key={b.id} b={b} fav={favs.includes(b.id)}
               onToggleFav={() => toggleFav(b.id)}

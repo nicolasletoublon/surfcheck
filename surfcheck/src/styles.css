@@ -161,3 +161,30 @@ button { font-family: 'Figtree', sans-serif; }
 .dp-extra-small { font-size: 11px; color: var(--dp-soft); }
 .dp-extra a { font-size: 13px; font-weight: 600; }
 .dp-sheet-notes { font-size: 11.5px; color: var(--dp-soft); margin-top: 12px; padding: 0 2px; }
+
+/* Interactive chart tooltip */
+.dp-tip { background: var(--dp-sheet); border: 1px solid var(--dp-line); border-radius: 12px; padding: 9px 11px; font-size: 11.5px; box-shadow: var(--dp-shadow); }
+.dp-tip-head { display: flex; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 5px; }
+.dp-tip-row { display: flex; align-items: center; gap: 6px; color: var(--dp-soft); margin-top: 2px; white-space: nowrap; }
+
+/* Surfcam links */
+.dp-cams { display: flex; flex-direction: column; gap: 2px; }
+.dp-cams a { font-size: 12px; font-weight: 600; }
+
+/* Desktop: favourites expand into full panels */
+.dp-panels { display: grid; gap: 14px; }
+.dp-panel {
+  background: var(--dp-card); border: 1px solid var(--dp-line); border-radius: 20px;
+  padding: 18px; box-shadow: var(--dp-shadow); display: flex; flex-direction: column; gap: 10px;
+  min-width: 0;
+}
+.dp-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+.dp-panel-title { flex: 1; min-width: 0; }
+.dp-panel .dp-sheet-notes { margin-top: 0; }
+@media (min-width: 1000px) {
+  .dp-col { max-width: 1240px; }
+  .dp-seg { align-self: flex-start; min-width: 420px; }
+  .dp-banner { align-self: stretch; }
+  .dp-panels { grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); }
+  .dp-main-grid { display: grid; grid-template-columns: repeat(2, 1fr); align-items: start; }
+}

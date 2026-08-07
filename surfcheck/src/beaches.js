@@ -3,12 +3,33 @@
 // bestDir: swell from-direction that lights the beach up
 // dirWidth: tolerance (°) around bestDir before exposure falls off
 // expoBase: how much open-ocean swell reaches the lineup (0–1)
+// cams: surfcam links, free/no-login ones first
+const RANDWICK_CAMS = 'https://www.randwick.nsw.gov.au/facilities-and-recreation/explore-randwick-city/beach-cams';
 export const BEACHES = [
-  { id: 'bondi',    name: 'Bondi',    lat: -33.8908, lon: 151.2743, facing: 135, bestDir: 150, dirWidth: 75, expoBase: 0.7,  notes: 'South end more protected; handles S swell well',        webcam: 'https://www.swellnet.com/surfcams/nsw/bondi-beach' },
-  { id: 'tamarama', name: 'Tamarama', lat: -33.9005, lon: 151.2703, facing: 120, bestDir: 130, dirWidth: 70, expoBase: 0.75, notes: 'Small bay, focuses swell, punchy shorebreak',            webcam: 'https://www.swellnet.com/surfcams/nsw/tamarama' },
-  { id: 'bronte',   name: 'Bronte',   lat: -33.9036, lon: 151.2699, facing: 100, bestDir: 110, dirWidth: 70, expoBase: 0.55, notes: 'Beach break, best on mid tide',                          webcam: 'https://www.swellnet.com/surfcams/nsw/bronte' },
-  { id: 'coogee',   name: 'Coogee',   lat: -33.9205, lon: 151.2585, facing: 110, bestDir: 120, dirWidth: 55, expoBase: 0.25, notes: 'Sheltered by Wedding Cake Island; needs bigger swell',   webcam: 'https://www.swellnet.com/surfcams/nsw/coogee' },
-  { id: 'maroubra', name: 'Maroubra', lat: -33.95,   lon: 151.257,  facing: 115, bestDir: 140, dirWidth: 90, expoBase: 1.0,  notes: 'Most swell-exposed; picks up everything',                webcam: 'https://www.swellnet.com/surfcams/nsw/maroubra' },
+  { id: 'bondi',    name: 'Bondi',    lat: -33.8908, lon: 151.2743, facing: 135, bestDir: 150, dirWidth: 75, expoBase: 0.7,  notes: 'South end more protected; handles S swell well',
+    cams: [
+      { label: 'North Bondi SLSC (free)', url: 'https://northbondisurfclub.com/webcam/' },
+      { label: 'Bondi SLSC (free)',       url: 'https://bondisurfclub.com/bondi-surf-cam/' },
+      { label: 'Swellnet',                url: 'https://www.swellnet.com/surfcams/nsw/bondi-beach' },
+    ] },
+  { id: 'tamarama', name: 'Tamarama', lat: -33.9005, lon: 151.2703, facing: 120, bestDir: 130, dirWidth: 70, expoBase: 0.75, notes: 'Small bay, focuses swell, punchy shorebreak',
+    cams: [
+      { label: 'Swellnet', url: 'https://www.swellnet.com/surfcams/nsw/tamarama' },
+    ] },
+  { id: 'bronte',   name: 'Bronte',   lat: -33.9036, lon: 151.2699, facing: 100, bestDir: 110, dirWidth: 70, expoBase: 0.55, notes: 'Beach break, best on mid tide',
+    cams: [
+      { label: 'Swellnet', url: 'https://www.swellnet.com/surfcams/nsw/bronte' },
+    ] },
+  { id: 'coogee',   name: 'Coogee',   lat: -33.9205, lon: 151.2585, facing: 110, bestDir: 120, dirWidth: 55, expoBase: 0.25, notes: 'Sheltered by Wedding Cake Island; needs bigger swell',
+    cams: [
+      { label: 'Randwick beach cams (free)', url: RANDWICK_CAMS },
+      { label: 'Swellnet',                   url: 'https://www.swellnet.com/surfcams/nsw/coogee' },
+    ] },
+  { id: 'maroubra', name: 'Maroubra', lat: -33.95,   lon: 151.257,  facing: 115, bestDir: 140, dirWidth: 90, expoBase: 1.0,  notes: 'Most swell-exposed; picks up everything',
+    cams: [
+      { label: 'Randwick beach cams (free)', url: RANDWICK_CAMS },
+      { label: 'Swellnet',                   url: 'https://www.swellnet.com/surfcams/nsw/maroubra' },
+    ] },
 ];
 
 export const SKILL_NAMES = ['Beginner', 'Intermediate', 'Experienced'];
