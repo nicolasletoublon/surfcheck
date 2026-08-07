@@ -140,6 +140,8 @@ button { font-family: 'Figtree', sans-serif; }
 }
 .dp-day.on { background: var(--dp-card2); border-color: var(--dp-teal); }
 .dp-day-lbl { font-size: 11px; font-weight: 600; color: var(--dp-soft); }
+.dp-ribbon { display: flex; width: 100%; height: 4px; border-radius: 999px; overflow: hidden; margin-top: 4px; }
+.dp-ribbon span { flex: 1; }
 .dp-day-score { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px; line-height: 1; }
 .dp-day-sw { font-size: 10.5px; color: var(--dp-ink); }
 .dp-day-wind { font-size: 10.5px; color: var(--dp-soft); }

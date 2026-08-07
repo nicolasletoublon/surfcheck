@@ -80,6 +80,30 @@ function goodRanges(hours) {
   return ranges;
 }
 
+const scoreColor = s => LABEL_COLOR[scoreLabel(s)];
+
+// Contiguous runs of hours sharing the same score label: [{from, to (inclusive), color}]
+function labelRuns(hours) {
+  const runs = [];
+  hours.forEach((h, i) => {
+    const color = scoreColor(h.score);
+    if (runs.length && runs[runs.length - 1].color === color) runs[runs.length - 1].to = i;
+    else runs.push({ from: i, to: i, color });
+  });
+  return runs;
+}
+
+// Surfline-style condition strip: one colour-graded segment per stretch of hours.
+function ScoreRibbon({ hours }) {
+  return (
+    <div className="dp-ribbon">
+      {hours.map(h => (
+        <span key={h.h} style={{ background: scoreColor(h.score) }} title={`${fmtClock(h.h)} · ${h.score.toFixed(1)}`} />
+      ))}
+    </div>
+  );
+}
+
 function ChartTip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const p = payload[0].payload;
@@ -129,6 +153,14 @@ function HourlyChart({ hours, isToday, nowT }) {
           strokeDasharray="4 4" dot={false} isAnimationActive={false}
           activeDot={{ r: 3, strokeWidth: 0, fill: 'var(--dp-coral)' }}
         />
+        {/* Condition strip along the bottom of the plot, colour-graded by score label */}
+        {labelRuns(hours).map(r => (
+          <ReferenceArea
+            key={`run-${r.from}`} yAxisId="n"
+            x1={r.from === 0 ? 0 : r.from - 0.5} x2={r.to === 23 ? 23 : r.to + 0.5}
+            y1={0} y2={0.05} fill={r.color} fillOpacity={0.9} strokeOpacity={0}
+          />
+        ))}
         {isToday && nowT != null && (
           <ReferenceLine
             yAxisId="m" x={Math.min(23, Math.max(0, nowT))}
@@ -158,7 +190,7 @@ function ChartCard({ b, day, nowT }) {
   );
 }
 
-function DayPills({ days, day, setDay }) {
+function DayPills({ days, hourly, day, setDay }) {
   return (
     <div className="dp-days">
       {days.map(d => (
@@ -167,6 +199,7 @@ function DayPills({ days, day, setDay }) {
           <span className="dp-day-score" style={{ color: LABEL_COLOR[d.label] }}>{d.best.toFixed(1)}</span>
           <span className="dp-day-sw">{d.swMin.toFixed(1)}–{d.swMax.toFixed(1)} m</span>
           <span className="dp-day-wind">{d.windLbl}</span>
+          <ScoreRibbon hours={hourly[d.d] ?? []} />
         </button>
       ))}
     </div>
@@ -266,7 +299,7 @@ function BeachPanel({ b, fav, onToggleFav, nowT }) {
         </div>
       </div>
       <StatsRow b={b} />
-      <DayPills days={b.days} day={day} setDay={setDay} />
+      <DayPills days={b.days} hourly={b.hourly} day={day} setDay={setDay} />
       <ChartCard b={b} day={day} nowT={nowT} />
       <Extras b={b} day={day} />
       <div className="dp-sheet-notes">{b.notes}</div>
@@ -290,7 +323,7 @@ function Sheet({ b, day, setDay, onClose, nowT }) {
             <div className="dp-scorelbl" style={{ color: LABEL_COLOR[b.label] }}>{b.label}</div>
           </div>
         </div>
-        <DayPills days={b.days} day={day} setDay={setDay} />
+        <DayPills days={b.days} hourly={b.hourly} day={day} setDay={setDay} />
         <ChartCard b={b} day={day} nowT={nowT} />
         <Extras b={b} day={day} />
         <div className="dp-sheet-notes">{b.notes}</div>
