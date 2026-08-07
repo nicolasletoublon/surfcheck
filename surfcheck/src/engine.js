@@ -149,7 +149,7 @@ export function buildModel(datasets, skillName, nowT, baseDate) {
         hrs.push({
           h, score: s2.score,
           swellH: hh.swellH, swellP: hh.swellP, swellDir: hh.swellDir,
-          windSpd: hh.windSpd, windDir: hh.windDir, tideN: hh.tideN,
+          windSpd: hh.windSpd, windDir: hh.windDir, windTag: s2.windTag, tideN: hh.tideN,
           faceLo: f2.lo, faceHi: f2.hi,
         });
         if (h >= Math.floor(sr) && h <= Math.ceil(ss)) {

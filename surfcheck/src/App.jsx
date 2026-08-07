@@ -9,7 +9,7 @@ import { fetchBeach, sydneyNow } from './api.js';
 
 const LABEL_COLOR = {
   Flat: 'var(--dp-flat)', Poor: 'var(--dp-poor)', Fair: 'var(--dp-amber)',
-  Good: 'var(--dp-green)', Firing: 'var(--dp-coral)',
+  Good: 'var(--dp-green)', Firing: 'var(--dp-violet)',
 };
 
 function useMediaQuery(query) {
@@ -118,7 +118,11 @@ function ChartTip({ active, payload }) {
         <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-sand)' }} />faces {p.faceLo.toFixed(1)}–{p.faceHi.toFixed(1)} m</div>
       )}
       <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-teal)' }} />swell {p.swellH.toFixed(1)} m · {Math.round(p.swellP)} s {compass(p.swellDir)}</div>
-      <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-coral)' }} />wind {Math.round(p.windSpd)} kn {compass(p.windDir)}</div>
+      <div className="dp-tip-row">
+        <span className="dp-dot" style={{ background: 'var(--dp-coral)' }} />
+        wind {Math.round(p.windSpd)} kn {compass(p.windDir)}
+        <span className={`dp-chip dp-tag-${p.windTag}`}>{p.windTag.toUpperCase()}</span>
+      </div>
       <div className="dp-tip-row"><span className="dp-dot" style={{ background: 'var(--dp-soft)' }} />{tideStage(p.tideN)} tide</div>
     </div>
   );
