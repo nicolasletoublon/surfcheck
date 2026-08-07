@@ -340,6 +340,7 @@ function Sheet({ b, day, setDay, onClose, nowT }) {
             <ScoreNum score={b.score} label={b.label} size={40} />
             <div className="dp-scorelbl" style={{ color: LABEL_COLOR[b.label] }}>{b.label}</div>
           </div>
+          <button className="dp-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <DayPills days={b.days} hourly={b.hourly} day={day} setDay={setDay} />
         <ChartCard b={b} day={day} nowT={nowT} />

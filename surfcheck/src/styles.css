@@ -129,6 +129,13 @@ button { font-family: 'Figtree', sans-serif; }
   animation: dp-up .3s cubic-bezier(.2,.9,.3,1); box-shadow: 0 -12px 40px rgba(1,14,22,.45);
 }
 .dp-handle { width: 42px; height: 4px; border-radius: 999px; background: var(--dp-line); margin: 0 auto 14px; }
+.dp-close {
+  width: 32px; height: 32px; flex-shrink: 0; border-radius: 999px;
+  border: 1px solid var(--dp-line); background: var(--dp-card2); color: var(--dp-soft);
+  font-size: 13px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.dp-close:hover { color: var(--dp-ink); border-color: var(--dp-teal); }
 .dp-sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 6px; }
 .dp-sheet-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 28px; line-height: 1; text-transform: uppercase; }
 .dp-sheet-why { font-size: 12.5px; line-height: 1.5; color: var(--dp-soft); margin-top: 6px; }
