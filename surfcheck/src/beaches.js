@@ -10,28 +10,27 @@ export const BEACHES = [
     cams: [
       { label: 'North Bondi SLSC (free)', url: 'https://northbondisurfclub.com/webcam/' },
       { label: 'Bondi SLSC (free)',       url: 'https://bondisurfclub.com/bondi-surf-cam/' },
-      { label: 'Swellnet',                url: 'https://www.swellnet.com/surfcams/nsw/bondi-beach' },
     ] },
   { id: 'tamarama', name: 'Tamarama', lat: -33.9005, lon: 151.2703, facing: 120, bestDir: 130, dirWidth: 70, expoBase: 0.75, notes: 'Small bay, focuses swell, punchy shorebreak',
     cams: [
-      { label: 'Swellnet', url: 'https://www.swellnet.com/surfcams/nsw/tamarama' },
+      { label: 'Swellnet (paid)', url: 'https://www.swellnet.com/surfcams/nsw/tamarama' },
     ] },
   { id: 'bronte',   name: 'Bronte',   lat: -33.9036, lon: 151.2699, facing: 100, bestDir: 110, dirWidth: 70, expoBase: 0.55, notes: 'Beach break, best on mid tide',
     cams: [
-      { label: 'Swellnet', url: 'https://www.swellnet.com/surfcams/nsw/bronte' },
+      { label: 'Swellnet (paid)', url: 'https://www.swellnet.com/surfcams/nsw/bronte' },
     ] },
   { id: 'maroubra', name: 'Maroubra', lat: -33.95,   lon: 151.257,  facing: 115, bestDir: 140, dirWidth: 90, expoBase: 1.0,  notes: 'Most swell-exposed; picks up everything',
     cams: [
       { label: 'Randwick beach cams (free)', url: RANDWICK_CAMS },
-      { label: 'Swellnet',                   url: 'https://www.swellnet.com/surfcams/nsw/maroubra' },
     ] },
   { id: 'manly',    name: 'Manly',    lat: -33.7930, lon: 151.2887, facing: 110, bestDir: 125, dirWidth: 80, expoBase: 0.65, notes: 'Long stretch Queenscliff to South Steyne; NE swell direct, S swell wraps in smaller',
     cams: [
-      { label: 'Swellnet', url: 'https://www.swellnet.com/surfcams/nsw/manly' },
+      { label: 'Elysium Manly hotel (free)', url: 'https://www.elysiumhotels.com/manly/live-surf-cam' },
+      { label: 'Surfline (free, ads)',       url: 'https://www.surfline.com/surf-report/manly-north-steyne/5d7ac1f48b90df000129e6ca' },
     ] },
   { id: 'deewhy',   name: 'Dee Why',  lat: -33.7515, lon: 151.2960, facing: 100, bestDir: 115, dirWidth: 80, expoBase: 0.85, notes: 'Point handles size at the south end; open beach break up north',
     cams: [
-      { label: 'Swellnet', url: 'https://www.swellnet.com/surfcams/nsw/dee-why' },
+      { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/dee-why/5842041f4e65fad6a7708bfa' },
     ] },
 ];
 
