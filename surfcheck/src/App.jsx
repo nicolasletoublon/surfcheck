@@ -320,6 +320,12 @@ function BeachPanel({ b, fav, onToggleFav, nowT }) {
 }
 
 function Sheet({ b, day, setDay, onClose, nowT }) {
+  // Lock background scroll while the sheet is open (mobile scroll-chaining fix).
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
   return (
     <>
       <div className="dp-scrim" onClick={onClose} />
