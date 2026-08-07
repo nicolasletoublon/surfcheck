@@ -51,7 +51,21 @@ function WaveDivider() {
   );
 }
 
-function Chart({ hours }) {
+const GOOD_SCORE = 7; // matches scoreLabel's Fair/Good boundary
+
+// Contiguous [startHour, endHour) ranges where the hourly score clears GOOD_SCORE.
+function goodRanges(hours) {
+  const ranges = [];
+  let start = null;
+  hours.forEach((h, i) => {
+    if (h.score >= GOOD_SCORE && start === null) start = i;
+    if (h.score < GOOD_SCORE && start !== null) { ranges.push([start, i]); start = null; }
+  });
+  if (start !== null) ranges.push([start, hours.length]);
+  return ranges;
+}
+
+function Chart({ hours, isToday, nowT }) {
   const L = 30, R = 352, T = 12, B = 126;
   const x = i => L + ((R - L) * i) / 23;
   const ySw = v => B - ((B - T) * Math.min(v, 2.5)) / 2.5;
@@ -61,8 +75,12 @@ function Chart({ hours }) {
   const swellLine = line(ySw, 'swellH');
   const grid = [1, 2].map(m => ({ y: ySw(m), txt: `${m} m` }));
   const xlabels = [0, 6, 12, 18, 23].map(i => ({ x: x(i), txt: i === 23 ? '11 pm' : fmtClock(i) }));
+  const nowX = isToday && nowT != null ? x(Math.min(23, Math.max(0, nowT))) : null;
   return (
     <svg className="dp-chart-svg" viewBox="0 0 360 150">
+      {goodRanges(hours).map(([a, b]) => (
+        <rect key={a} x={x(a)} y={T} width={Math.max(0, x(b) - x(a))} height={B - T} fill="var(--dp-green)" fillOpacity="0.14" />
+      ))}
       {grid.map(g => (
         <g key={g.txt}>
           <line x1={L} x2={R} y1={g.y} y2={g.y} stroke="var(--dp-line)" strokeWidth="1" />
@@ -76,6 +94,13 @@ function Chart({ hours }) {
       {xlabels.map(xl => (
         <text key={xl.txt} x={xl.x} y="144" textAnchor="middle" fontSize="9" fill="var(--dp-soft)">{xl.txt}</text>
       ))}
+      {nowX != null && (
+        <g>
+          <line x1={nowX} x2={nowX} y1={T} y2={B} stroke="var(--dp-coral)" strokeWidth="1.4" strokeDasharray="2 2" />
+          <circle cx={nowX} cy={T} r="2.5" fill="var(--dp-coral)" />
+          <text x={nowX} y={T - 3} textAnchor="middle" fontSize="8" fontWeight="700" fill="var(--dp-coral)">NOW</text>
+        </g>
+      )}
     </svg>
   );
 }
@@ -119,7 +144,7 @@ function BeachCard({ b, fav, onToggleFav, onOpen }) {
   );
 }
 
-function Sheet({ b, day, setDay, onClose }) {
+function Sheet({ b, day, setDay, onClose, nowT }) {
   const sun = b.sun[Math.min(day, b.sun.length - 1)];
   return (
     <>
@@ -153,9 +178,10 @@ function Sheet({ b, day, setDay, onClose }) {
               <span><span className="dp-dot" style={{ background: 'var(--dp-teal)' }} />swell m</span>
               <span><span className="dp-dot" style={{ background: 'var(--dp-coral)' }} />wind kn</span>
               <span><span className="dp-dot" style={{ background: 'var(--dp-soft)' }} />tide</span>
+              <span><span className="dp-dot" style={{ background: 'var(--dp-green)' }} />good window</span>
             </div>
           </div>
-          <Chart hours={b.hourly[day] ?? []} />
+          <Chart hours={b.hourly[day] ?? []} isToday={day === 0} nowT={nowT} />
         </div>
         <div className="dp-extras">
           <div className="dp-extra">
@@ -221,6 +247,7 @@ export default function App() {
   const ranked = model
     ? [...model.beaches].sort((a, b) => (favs.includes(b.id) - favs.includes(a.id)) || (b.score - a.score))
     : [];
+  const { nowT } = sydneyNow();
   const sheetBeach = model && sheetId ? model.beaches.find(b => b.id === sheetId) : null;
 
   const newest = Math.max(0, ...ready.map(b => data[b.id].dataset.fetchedAt ?? 0));
@@ -294,7 +321,7 @@ export default function App() {
         </div>
       </div>
 
-      {sheetBeach && <Sheet b={sheetBeach} day={day} setDay={setDay} onClose={() => setSheetId(null)} />}
+      {sheetBeach && <Sheet b={sheetBeach} day={day} setDay={setDay} onClose={() => setSheetId(null)} nowT={nowT} />}
     </div>
   );
 }
