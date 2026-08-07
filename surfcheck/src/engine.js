@@ -1,0 +1,184 @@
+// Dawn Patrol — surf-score engine.
+// Ported from the Claude Design handoff (design_handoff_dawn_patrol/beaches.js),
+// with the mock generator replaced by real Open-Meteo hourly data.
+//
+// An "hour" record (built in api.js) looks like:
+// { t, swellH (m), swellP (s), swellDir (°from), windDir (°from), windSpd (kn),
+//   tide (m MSL), tideN (0–1 normalised over the 5-day window) }
+
+import { SKILLS } from './beaches.js';
+
+const C16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+export const compass = d => C16[Math.round((((d % 360) + 360) % 360) / 22.5) % 16];
+export const angDiff = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+export const tideStage = n => (n < 0.3 ? 'low' : n > 0.7 ? 'high' : 'mid');
+
+// ---- Score (weights per handoff: wind .35, size .20, direction .25, period .10, tide .10)
+export function scoreHour(beach, hr, skillName) {
+  const s = SKILLS[skillName];
+  const eff = hr.swellH * Math.sqrt(hr.swellP / 10); // period-weighted effective height
+  const dd = angDiff(hr.swellDir, beach.bestDir);
+  const falloff = Math.max(0, 1 - (dd / beach.dirWidth) ** 2);
+  const expo = beach.expoBase * falloff;
+  const breakH = eff * expo;
+  const offDir = (beach.facing + 180) % 360;
+  const wd = angDiff(hr.windDir, offDir);
+  let wind;
+  if (hr.windSpd < 5) wind = 9;
+  else if (wd <= 55) wind = 9.5 - Math.max(0, hr.windSpd - 18) * 0.35;
+  else if (wd <= 115) wind = 6 - hr.windSpd * 0.25 * s.windMult;
+  else wind = 5 - hr.windSpd * 0.5 * s.windMult;
+  wind = clamp(wind, 0, 10);
+  const size = 10 * Math.exp(-(((breakH - s.center) / s.spread) ** 2));
+  const dir = Math.min(10, expo * 10);
+  const period = hr.swellP < 7 ? 3 : hr.swellP < 8 ? 5 : hr.swellP < 10 ? 7 : hr.swellP < 11 ? 8.5 : 10;
+  const tide = 10 - 3.5 * (2 * Math.abs(hr.tideN - 0.5)) ** 2;
+  let score = 0.35 * wind + 0.2 * size + 0.25 * dir + 0.1 * period + 0.1 * tide;
+  if (breakH < 0.35) score = Math.min(score, 1.6);
+  else if (breakH < 0.55) score = Math.min(score, 4.5);
+  return {
+    score: Math.round(score * 10) / 10,
+    breakH,
+    windF: wind,
+    windTag: wd <= 55 ? 'offshore' : wd <= 115 ? 'cross-shore' : 'onshore',
+  };
+}
+
+export const scoreLabel = s => (s < 2 ? 'Flat' : s < 4 ? 'Poor' : s < 7 ? 'Fair' : s < 8.5 ? 'Good' : 'Firing');
+
+export const wetsuit = t => (t > 21 ? 'Springsuit' : t >= 18 ? '3/2 steamer' : t >= 15 ? '3/2 + booties' : '4/3 steamer');
+
+export function fmtClock(h) {
+  const h24 = ((h % 24) + 24) % 24;
+  let hh = Math.floor(h24), mm = Math.round((h24 - hh) * 60);
+  if (mm === 60) { mm = 0; hh = (hh + 1) % 24; }
+  const ap = hh < 12 ? 'am' : 'pm';
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return mm === 0 ? `${h12} ${ap}` : `${h12}:${String(mm).padStart(2, '0')} ${ap}`;
+}
+
+export function whyLine(beach, hr, sc, rising) {
+  if (sc.breakH < 0.35) {
+    return beach.id === 'coogee'
+      ? `Wedding Cake Island is soaking up this swell — barely ${sc.breakH.toFixed(1)} m breaking.`
+      : `Not really breaking — this swell angle misses ${beach.name}.`;
+  }
+  const clean = sc.windTag === 'offshore' ? 'Clean' : sc.windF >= 5 ? 'Workable' : 'Bumpy';
+  const kind = hr.swellP >= 11 ? 'groundswell' : hr.swellP >= 8 ? 'swell' : 'windswell';
+  const stage = tideStage(hr.tideN);
+  const dirn = rising ? 'rising' : 'falling';
+  return `${clean} ${hr.swellH.toFixed(1)} m ${compass(hr.swellDir)} ${kind} at ${Math.round(hr.swellP)} s, ${Math.round(hr.windSpd)} kn ${compass(hr.windDir)} ${sc.windTag}, ${stage} tide ${dirn}.`;
+}
+
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+export function dayLabel(baseDate, d) {
+  if (d === 0) return 'Today';
+  const dt = new Date(baseDate.getTime() + d * 864e5);
+  return (d === 1 ? 'Tmrw' : DOW[dt.getDay()]) + ' ' + dt.getDate();
+}
+
+// ---- Real-tide helpers (hourly resolution)
+export const tideRisingAt = (hours, i) => {
+  const a = hours[Math.min(i, hours.length - 2)];
+  const b = hours[Math.min(i + 1, hours.length - 1)];
+  return b.tide > a.tide;
+};
+
+export function nextTideExtreme(hours, t) {
+  for (let i = Math.max(1, Math.ceil(t)); i < hours.length - 1; i++) {
+    const p = hours[i - 1].tide, c = hours[i].tide, n = hours[i + 1].tide;
+    if (c >= p && c >= n && c !== n) return { kind: 'high', t: i };
+    if (c <= p && c <= n && c !== n) return { kind: 'low', t: i };
+  }
+  return null;
+}
+
+// ---- Model
+// datasets: [{ beach, hours, sun: [{sr, ss}×5], sst }]  (from api.js)
+export function buildModel(datasets, skillName, nowT, baseDate) {
+  const beaches = datasets.map(({ beach: b, hours, sun, sst }) => {
+    const iNow = clamp(Math.floor(nowT), 0, hours.length - 1);
+    const hr = hours[iNow];
+    const rising = tideRisingAt(hours, iNow);
+    const sc = scoreHour(b, hr, skillName);
+    const ext = nextTideExtreme(hours, nowT);
+    const days = [], hourly = [];
+    for (let d = 0; d < 5; d++) {
+      const { sr, ss } = sun[Math.min(d, sun.length - 1)];
+      let best = 0, swMin = 99, swMax = 0, vx = 0, vy = 0, spdSum = 0, n = 0;
+      const hrs = [];
+      for (let h = 0; h < 24; h++) {
+        const t = d * 24 + h;
+        if (t >= hours.length) break;
+        const hh = hours[t];
+        const s2 = scoreHour(b, hh, skillName);
+        hrs.push({ h, swellH: hh.swellH, windSpd: hh.windSpd, tideN: hh.tideN, score: s2.score });
+        if (h >= Math.floor(sr) && h <= Math.ceil(ss)) {
+          best = Math.max(best, s2.score);
+          swMin = Math.min(swMin, hh.swellH);
+          swMax = Math.max(swMax, hh.swellH);
+          const r = (hh.windDir * Math.PI) / 180;
+          vx += Math.sin(r) * hh.windSpd; vy += Math.cos(r) * hh.windSpd; spdSum += hh.windSpd; n++;
+        }
+      }
+      const avgDir = ((Math.atan2(vx, vy) * 180) / Math.PI + 360) % 360;
+      days.push({
+        d,
+        best: Math.round(best * 10) / 10,
+        label: scoreLabel(best),
+        lbl: dayLabel(baseDate, d),
+        swMin, swMax,
+        windLbl: n ? `${compass(avgDir)} ${Math.round(spdSum / n)} kn` : '—',
+      });
+      hourly.push(hrs);
+    }
+    return {
+      id: b.id, name: b.name, notes: b.notes, webcam: b.webcam, sst,
+      score: sc.score, label: scoreLabel(sc.score), why: whyLine(b, hr, sc, rising),
+      swell: { h: hr.swellH, p: hr.swellP, dirFrom: hr.swellDir, going: (hr.swellDir + 180) % 360 },
+      wind: { spd: hr.windSpd, dirFrom: hr.windDir, going: (hr.windDir + 180) % 360, tag: sc.windTag },
+      tide: {
+        stage: tideStage(hr.tideN),
+        rising,
+        nextKind: ext ? ext.kind : null,
+        nextT: ext ? ext.t : null,
+      },
+      sun,
+      days, hourly,
+    };
+  }).sort((a, b) => b.score - a.score);
+
+  // Best window across beaches in the next 48 daylight hours
+  let bw = null;
+  for (const ds of datasets) {
+    const { beach: b, hours, sun } = ds;
+    for (let t = Math.ceil(nowT); t <= nowT + 48 && t < hours.length; t++) {
+      const d = Math.floor(t / 24);
+      if (d > 4) break;
+      const { sr, ss } = sun[Math.min(d, sun.length - 1)];
+      const h = t - d * 24;
+      if (h < sr - 0.5 || h > ss) continue;
+      const s2 = scoreHour(b, hours[t], skillName);
+      if (!bw || s2.score > bw.score) bw = { ds, t, score: s2.score };
+    }
+  }
+  let bestWindow = null;
+  if (bw) {
+    const { beach: b, hours, sun } = bw.ds;
+    const d = Math.floor(bw.t / 24);
+    const { sr, ss } = sun[Math.min(d, sun.length - 1)];
+    let s = bw.t, e = bw.t;
+    while (s - 1 >= d * 24 + sr - 0.5 && s - 1 >= 0 && scoreHour(b, hours[s - 1], skillName).score >= bw.score - 0.5) s--;
+    while (e + 1 <= d * 24 + ss && e + 1 < hours.length && scoreHour(b, hours[e + 1], skillName).score >= bw.score - 0.5) e++;
+    const today = Math.floor(nowT / 24);
+    const dayLbl = d === today ? 'today' : d === today + 1 ? 'tomorrow' : dayLabel(baseDate, d);
+    bestWindow = {
+      name: b.name, dayLbl,
+      span: `${fmtClock(s - d * 24)}–${fmtClock(e + 1 - d * 24)}`,
+      score: bw.score, label: scoreLabel(bw.score),
+    };
+  }
+  return { beaches, bestWindow };
+}
