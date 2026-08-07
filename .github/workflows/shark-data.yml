@@ -1,0 +1,29 @@
+name: Update shark data
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shark-data
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/build-shark-data.mjs
+      - name: Publish sharks.json to shark-data branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan shark-data
+          git rm -rf --cached . >/dev/null
+          git add -f sharks.json
+          git commit -m "Update shark data"
+          git push -f origin shark-data

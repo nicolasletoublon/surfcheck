@@ -20,15 +20,18 @@ export const BEACHES = [
     cams: [
       { label: 'Swellnet', url: 'https://www.swellnet.com/surfcams/nsw/bronte' },
     ] },
-  { id: 'coogee',   name: 'Coogee',   lat: -33.9205, lon: 151.2585, facing: 110, bestDir: 120, dirWidth: 55, expoBase: 0.25, notes: 'Sheltered by Wedding Cake Island; needs bigger swell',
-    cams: [
-      { label: 'Randwick beach cams (free)', url: RANDWICK_CAMS },
-      { label: 'Swellnet',                   url: 'https://www.swellnet.com/surfcams/nsw/coogee' },
-    ] },
   { id: 'maroubra', name: 'Maroubra', lat: -33.95,   lon: 151.257,  facing: 115, bestDir: 140, dirWidth: 90, expoBase: 1.0,  notes: 'Most swell-exposed; picks up everything',
     cams: [
       { label: 'Randwick beach cams (free)', url: RANDWICK_CAMS },
       { label: 'Swellnet',                   url: 'https://www.swellnet.com/surfcams/nsw/maroubra' },
+    ] },
+  { id: 'manly',    name: 'Manly',    lat: -33.7930, lon: 151.2887, facing: 110, bestDir: 125, dirWidth: 80, expoBase: 0.65, notes: 'Long stretch Queenscliff to South Steyne; NE swell direct, S swell wraps in smaller',
+    cams: [
+      { label: 'Swellnet', url: 'https://www.swellnet.com/surfcams/nsw/manly' },
+    ] },
+  { id: 'deewhy',   name: 'Dee Why',  lat: -33.7515, lon: 151.2960, facing: 100, bestDir: 115, dirWidth: 80, expoBase: 0.85, notes: 'Point handles size at the south end; open beach break up north',
+    cams: [
+      { label: 'Swellnet', url: 'https://www.swellnet.com/surfcams/nsw/dee-why' },
     ] },
 ];
 

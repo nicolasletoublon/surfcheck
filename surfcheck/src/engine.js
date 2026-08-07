@@ -92,9 +92,7 @@ export function fmtClock(h) {
 
 export function whyLine(beach, hr, sc, rising) {
   if (sc.breakH < 0.15) {
-    return beach.id === 'coogee'
-      ? `Wedding Cake Island is soaking up this swell — barely ${sc.breakH.toFixed(1)} m breaking.`
-      : `Not really breaking — this swell angle misses ${beach.name}.`;
+    return `Not really breaking — this swell angle misses ${beach.name}.`;
   }
   const clean = sc.windTag === 'offshore' ? 'Clean' : sc.windF >= 5 ? 'Workable' : 'Bumpy';
   const kind = hr.swellP >= 11 ? 'groundswell' : hr.swellP >= 8 ? 'swell' : 'windswell';

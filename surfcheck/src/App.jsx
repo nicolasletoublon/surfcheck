@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { BEACHES, SKILL_NAMES, SKILLS } from './beaches.js';
 import { buildModel, compass, fmtClock, scoreLabel, tideStage, wetsuit } from './engine.js';
-import { fetchBeach, sydneyNow } from './api.js';
+import { fetchBeach, fetchSharks, sydneyNow } from './api.js';
 
 const LABEL_COLOR = {
   Flat: 'var(--dp-flat)', Poor: 'var(--dp-poor)', Fair: 'var(--dp-amber)',
@@ -63,6 +63,87 @@ function WaveDivider() {
       <path d="M0 16 Q 36 4, 72 14 T 145 14 T 218 14 T 290 14 T 362 14 T 435 14 T 508 14 T 580 14 V 26 H 0 Z" fill="var(--dp-teal)" fillOpacity="0.09" />
       <path d="M0 20 Q 48 10, 96 18 T 193 18 T 290 18 T 386 18 T 483 18 T 580 18" stroke="var(--dp-teal)" strokeOpacity="0.25" strokeWidth="1.5" fill="none" />
     </svg>
+  );
+}
+
+// ---- Shark watch (NSW SharkSmart data, see scripts/build-shark-data.mjs)
+const SHARK_MATCH_KM = 2.5;   // feed feature within this distance counts as "this beach"
+const SHARK_CHIP_DAYS = 7;    // fin badge on the beach card
+const SHARK_ALERT_HOURS = 24; // red badge (unless the beach has since reopened)
+
+const distKm = (lat1, lon1, lat2, lon2) => {
+  const r = Math.PI / 180, dLat = (lat2 - lat1) * r, dLon = (lon2 - lon1) * r;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(a));
+};
+
+const isSighting = m => /shark (observed|sighted)|beach closed|water evacuated/i.test(m) && !/reopened/i.test(m);
+
+// Latest sighting near this beach (within the feed's 14-day window), plus a
+// severity: 'alert' (<24h, beach not since reopened), 'recent' (<7 days), or null.
+function sharkInfo(beach, sharks) {
+  if (!sharks?.beaches?.length) return null;
+  const notes = sharks.beaches
+    .filter(s => distKm(beach.lat, beach.lon, s.lat, s.lon) <= SHARK_MATCH_KM)
+    .flatMap(s => s.notes)
+    .sort((a, b) => (a.t < b.t ? 1 : -1));
+  const latest = notes.find(n => isSighting(n.msg));
+  if (!latest) return null;
+  const ageH = (Date.now() - new Date(latest.t).getTime()) / 36e5;
+  const reopened = notes.some(n => /reopened/i.test(n.msg) && n.t > latest.t);
+  const status = ageH <= SHARK_ALERT_HOURS && !reopened ? 'alert'
+    : ageH <= SHARK_CHIP_DAYS * 24 ? 'recent' : null;
+  return { latest, ageH, status };
+}
+
+const fmtAgo = t => {
+  const h = (Date.now() - new Date(t).getTime()) / 36e5;
+  if (h < 1) return `${Math.max(1, Math.round(h * 60))} min ago`;
+  if (h < 48) return `${Math.round(h)} h ago`;
+  return `${Math.round(h / 24)} d ago`;
+};
+
+function FinIcon({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 19 C6 8 13 4 20 8 C15 9 13 12 12.4 19 Z" fill="currentColor" />
+      <path d="M2 21 q3 -2 5.5 0 q3 -2 5.5 0 q3 -2 5.5 0 q2 -1.4 3.5 -0.6" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SharkChip({ info }) {
+  if (!info?.status) return null;
+  return (
+    <span className={`dp-chip dp-shark-chip ${info.status}`} title={info.latest.msg}>
+      <FinIcon size={10} /> SHARK {fmtAgo(info.latest.t)}
+    </span>
+  );
+}
+
+// Summary card: latest sighting per tracked beach in the feed window.
+function SharkWatch({ sharks }) {
+  const rows = [];
+  const seen = new Set(); // one row per sighting even when it sits near two of our beaches
+  for (const r of BEACHES.map(b => ({ b, info: sharkInfo(b, sharks) })).filter(r => r.info).sort((a, b) => a.info.ageH - b.info.ageH)) {
+    if (!seen.has(r.info.latest.msg)) { seen.add(r.info.latest.msg); rows.push(r); }
+  }
+  return (
+    <div className="dp-shark-card">
+      <div className="dp-shark-head">
+        <span className="dp-eyebrow dp-shark-title"><FinIcon size={13} /> SHARK WATCH</span>
+        <a href="https://www.sharksmart.nsw.gov.au/shark-activity" target="_blank" rel="noreferrer">SharkSmart map →</a>
+      </div>
+      {rows.length ? rows.map(({ b, info }) => (
+        <div key={b.id} className="dp-shark-row">
+          <span className={`dp-shark-when ${info.status ?? ''}`}>{fmtAgo(info.latest.t)}</span>
+          <span className="dp-shark-msg"><strong>near {b.name}</strong> — {info.latest.msg.replace(/^SLSNSW advise (that )?/i, '')}</span>
+        </div>
+      )) : (
+        <div className="dp-shark-none">No shark sightings reported near these beaches in the last {sharks.keepDays ?? 14} days.</div>
+      )}
+      <div className="dp-shark-src">NSW SharkSmart (DPIRD) · drone &amp; tagged-shark reports · updated {fmtAgo(sharks.updatedAt)}</div>
+    </div>
   );
 }
 
@@ -266,7 +347,7 @@ function Extras({ b, day }) {
   );
 }
 
-function BeachCard({ b, fav, onToggleFav, onOpen }) {
+function BeachCard({ b, fav, onToggleFav, onOpen, shark }) {
   return (
     <article className="dp-card" onClick={onOpen}>
       <div className="dp-card-score">
@@ -278,6 +359,7 @@ function BeachCard({ b, fav, onToggleFav, onOpen }) {
           <div className="dp-card-name-left">
             <div className="dp-card-name">{b.name}</div>
             {fav && <span className="dp-chip dp-chip-pinned">PINNED</span>}
+            <SharkChip info={shark} />
           </div>
           <div className="dp-card-actions">
             <Star pinned={fav} onClick={e => { e.stopPropagation(); onToggleFav(); }} />
@@ -292,7 +374,7 @@ function BeachCard({ b, fav, onToggleFav, onOpen }) {
 }
 
 // Desktop: an always-expanded card with everything the sheet shows, no click needed.
-function BeachPanel({ b, fav, onToggleFav, nowT }) {
+function BeachPanel({ b, fav, onToggleFav, nowT, shark }) {
   const [day, setDay] = useState(0);
   return (
     <section className="dp-panel">
@@ -301,6 +383,7 @@ function BeachPanel({ b, fav, onToggleFav, nowT }) {
           <div className="dp-card-name-left">
             <div className="dp-sheet-name">{b.name}</div>
             {fav && <span className="dp-chip dp-chip-pinned">PINNED</span>}
+            <SharkChip info={shark} />
             <Star pinned={fav} onClick={onToggleFav} />
           </div>
           <div className="dp-sheet-why">{b.why}</div>
@@ -319,7 +402,7 @@ function BeachPanel({ b, fav, onToggleFav, nowT }) {
   );
 }
 
-function Sheet({ b, day, setDay, onClose, nowT }) {
+function Sheet({ b, day, setDay, onClose, nowT, shark }) {
   // Lock background scroll while the sheet is open (mobile scroll-chaining fix).
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -333,7 +416,10 @@ function Sheet({ b, day, setDay, onClose, nowT }) {
         <div className="dp-handle" />
         <div className="dp-sheet-head">
           <div style={{ flex: 1 }}>
-            <div className="dp-sheet-name">{b.name}</div>
+            <div className="dp-card-name-left">
+              <div className="dp-sheet-name">{b.name}</div>
+              <SharkChip info={shark} />
+            </div>
             <div className="dp-sheet-why">{b.why}</div>
           </div>
           <div className="dp-scorecol">
@@ -360,6 +446,7 @@ export default function App() {
   const [sheetId, setSheetId] = useState(null);
   const [day, setDay] = useState(0);
   const [data, setData] = useState({});   // beachId -> { status, dataset?, error? }
+  const [sharks, setSharks] = useState(null); // null = unavailable, feature hidden
   const [, setTick] = useState(0);        // re-render each minute for "updated X min ago" / now-hour rollover
   const isDesktop = useMediaQuery('(min-width: 1000px)');
 
@@ -377,11 +464,17 @@ export default function App() {
     });
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); fetchSharks().then(setSharks); }, []);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  const sharkByBeach = useMemo(() => {
+    const m = {};
+    if (sharks) BEACHES.forEach(b => { m[b.id] = sharkInfo(b, sharks); });
+    return m;
+  }, [sharks]);
 
   const ready = BEACHES.filter(b => data[b.id]?.status === 'ok');
   const model = useMemo(() => {
@@ -446,10 +539,12 @@ export default function App() {
           </div>
         )}
 
+        {sharks && <SharkWatch sharks={sharks} />}
+
         {featured.length > 0 && (
           <section className="dp-panels">
             {featured.map(b => (
-              <BeachPanel key={b.id} b={b} fav={favs.includes(b.id)} onToggleFav={() => toggleFav(b.id)} nowT={nowT} />
+              <BeachPanel key={b.id} b={b} fav={favs.includes(b.id)} onToggleFav={() => toggleFav(b.id)} nowT={nowT} shark={sharkByBeach[b.id]} />
             ))}
           </section>
         )}
@@ -460,6 +555,7 @@ export default function App() {
               key={b.id} b={b} fav={favs.includes(b.id)}
               onToggleFav={() => toggleFav(b.id)}
               onOpen={() => { setSheetId(b.id); setDay(0); }}
+              shark={sharkByBeach[b.id]}
             />
           ))}
           {BEACHES.filter(b => data[b.id]?.status === 'loading').map(b => (
@@ -481,7 +577,7 @@ export default function App() {
         </div>
       </div>
 
-      {sheetBeach && <Sheet b={sheetBeach} day={day} setDay={setDay} onClose={() => setSheetId(null)} nowT={nowT} />}
+      {sheetBeach && <Sheet b={sheetBeach} day={day} setDay={setDay} onClose={() => setSheetId(null)} nowT={nowT} shark={sharkByBeach[sheetBeach.id]} />}
     </div>
   );
 }

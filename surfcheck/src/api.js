@@ -93,6 +93,27 @@ function assemble(beach, marine, forecast) {
   return { beach, hours, sun, sst: sstArr[iNow] };
 }
 
+// ---- Shark activity (NSW SharkSmart via our shark-data branch, see
+// scripts/build-shark-data.mjs). Returns null when unavailable — the UI
+// simply hides the feature.
+const SHARK_URL = 'https://raw.githubusercontent.com/nicolasletoublon/surfcheck/shark-data/sharks.json';
+const SHARK_TTL = 15 * 60 * 1000; // raw.githubusercontent caches ~5 min anyway
+
+export async function fetchSharks() {
+  const key = 'dp-sharks';
+  try {
+    const raw = JSON.parse(localStorage.getItem(key));
+    if (raw && Date.now() - raw.ts < SHARK_TTL) return raw.data;
+  } catch { /* ignore */ }
+  try {
+    const data = await getJson(SHARK_URL);
+    try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch { /* fine */ }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 // Fetch (or serve cached) data for one beach.
 export async function fetchBeach(beach) {
   const { dateKey } = sydneyNow();
