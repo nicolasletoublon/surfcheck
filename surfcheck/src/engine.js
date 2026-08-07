@@ -35,9 +35,12 @@ export function scoreHour(beach, hr, skillName) {
   const dir = Math.min(10, expo * 10);
   const period = hr.swellP < 7 ? 3 : hr.swellP < 8 ? 5 : hr.swellP < 10 ? 7 : hr.swellP < 11 ? 8.5 : 10;
   const tide = 10 - 3.5 * (2 * Math.abs(hr.tideN - 0.5)) ** 2;
-  let score = 0.35 * wind + 0.2 * size + 0.25 * dir + 0.1 * period + 0.1 * tide;
-  if (breakH < 0.35) score = Math.min(score, 1.6);
-  else if (breakH < 0.55) score = Math.min(score, 4.5);
+  // "Is there actually a wave" gate: fades in from 0 (dead flat, ≤0.1 m) to full weight
+  // (clearly rideable, ≥0.45 m). Replaces a hard Flat/Poor cliff so a small, clean,
+  // well-aligned swell can read Fair instead of being floored — while wind/tide alone
+  // (which don't measure size) still can't fake a score on a truly flat, glassy day.
+  const sizeGate = clamp((breakH - 0.1) / 0.35, 0, 1);
+  let score = (0.35 * wind + 0.2 * size + 0.25 * dir + 0.1 * period + 0.1 * tide) * sizeGate;
   return {
     score: Math.round(score * 10) / 10,
     breakH,
@@ -60,7 +63,7 @@ export function fmtClock(h) {
 }
 
 export function whyLine(beach, hr, sc, rising) {
-  if (sc.breakH < 0.35) {
+  if (sc.breakH < 0.15) {
     return beach.id === 'coogee'
       ? `Wedding Cake Island is soaking up this swell — barely ${sc.breakH.toFixed(1)} m breaking.`
       : `Not really breaking — this swell angle misses ${beach.name}.`;
