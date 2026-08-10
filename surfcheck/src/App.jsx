@@ -77,7 +77,9 @@ const distKm = (lat1, lon1, lat2, lon2) => {
   return 12742 * Math.asin(Math.sqrt(a));
 };
 
-const isSighting = m => /shark (observed|sighted)|beach closed|water evacuated/i.test(m) && !/reopened/i.test(m);
+const isSighting = m =>
+  /shark (observed|sighted)|beach closed|water evacuated|tagged .{0,20}shark|shark .{0,30}detected|detected by .{0,30}receiver/i.test(m)
+  && !/reopened|drones will not/i.test(m);
 
 // Latest sighting near this beach (within the feed's 14-day window), plus a
 // severity: 'alert' (<24h, beach not since reopened), 'recent' (<7 days), or null.
@@ -142,7 +144,7 @@ function SharkWatch({ sharks }) {
       )) : (
         <div className="dp-shark-none">No shark sightings reported near these beaches in the last {sharks.keepDays ?? 14} days.</div>
       )}
-      <div className="dp-shark-src">NSW SharkSmart (DPIRD) · drone &amp; tagged-shark reports · updated {fmtAgo(sharks.updatedAt)}</div>
+      <div className="dp-shark-src">NSW SharkSmart (DPIRD) + Dorsal · drone, community &amp; tagged-shark reports · updated {fmtAgo(sharks.updatedAt)}</div>
     </div>
   );
 }
