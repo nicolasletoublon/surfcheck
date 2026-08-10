@@ -17,10 +17,15 @@ export const tideStage = n => (n < 0.3 ? 'low' : n > 0.7 ? 'high' : 'mid');
 
 // How much of the open-ocean swell reaches this beach's lineup (0–1),
 // from base exposure and how far the swell angle sits off the beach's best direction.
+// Gaussian falloff rather than a hard cutoff: refraction wraps swell around
+// headlands, so off-axis swell arrives smaller, not absent (a hard cutoff had
+// us calling Bondi "flat" on an ENE swell Surfline rated FAIR at 1–3 ft).
+// Only swell actually heading away from the coast (>135° off) fades to zero.
 export function exposure(beach, hr) {
   const dd = angDiff(hr.swellDir, beach.bestDir);
-  const falloff = Math.max(0, 1 - (dd / beach.dirWidth) ** 2);
-  return beach.expoBase * falloff;
+  const falloff = Math.exp(-0.5 * (dd / beach.dirWidth) ** 2);
+  const seaward = clamp((165 - dd) / 30, 0, 1);
+  return beach.expoBase * falloff * seaward;
 }
 
 // Estimated breaking-face height (trough to lip, what you eyeball from the sand).
@@ -45,7 +50,9 @@ export const faceLabel = hi =>
   hi < 2.4 ? 'overhead' :
   hi < 3.2 ? 'well overhead' : 'double overhead+';
 
-// ---- Score (weights per handoff: wind .35, size .20, direction .25, period .10, tide .10)
+// ---- Score. Weights re-calibrated against Surfline ratings (Aug 2026):
+// cleanliness dominates — a small glassy day should read Fair/Good, not Flat.
+// wind .45, size .15, direction .15, period .15, tide .10
 export function scoreHour(beach, hr, skillName) {
   const s = SKILLS[skillName];
   const eff = hr.swellH * Math.sqrt(hr.swellP / 10); // period-weighted effective height
@@ -55,20 +62,24 @@ export function scoreHour(beach, hr, skillName) {
   const wd = angDiff(hr.windDir, offDir);
   let wind;
   if (hr.windSpd < 5) wind = 9;
-  else if (wd <= 55) wind = 9.5 - Math.max(0, hr.windSpd - 18) * 0.35;
+  // Offshore holds waves up, but strong offshore chops the face and makes the
+  // paddle miserable — penalise past ~12 kn (Surfline reads 25 kn offshore as Fair).
+  else if (wd <= 55) wind = 9.5 - Math.max(0, hr.windSpd - 12) * 0.3;
   else if (wd <= 115) wind = 6 - hr.windSpd * 0.25 * s.windMult;
   else wind = 5 - hr.windSpd * 0.5 * s.windMult;
   wind = clamp(wind, 0, 10);
-  const size = 10 * Math.exp(-(((breakH - s.center) / s.spread) ** 2));
+  // Asymmetric size preference: undersized waves are far less of a problem than
+  // oversized ones — small-but-clean still surfs well at every skill level.
+  const spread = breakH < s.center ? s.spread * 1.7 : s.spread;
+  const size = 10 * Math.exp(-(((breakH - s.center) / spread) ** 2));
   const dir = Math.min(10, expo * 10);
   const period = hr.swellP < 7 ? 3 : hr.swellP < 8 ? 5 : hr.swellP < 10 ? 7 : hr.swellP < 11 ? 8.5 : 10;
   const tide = 10 - 3.5 * (2 * Math.abs(hr.tideN - 0.5)) ** 2;
-  // "Is there actually a wave" gate: fades in from 0 (dead flat, ≤0.1 m) to full weight
-  // (clearly rideable, ≥0.45 m). Replaces a hard Flat/Poor cliff so a small, clean,
-  // well-aligned swell can read Fair instead of being floored — while wind/tide alone
-  // (which don't measure size) still can't fake a score on a truly flat, glassy day.
-  const sizeGate = clamp((breakH - 0.1) / 0.35, 0, 1);
-  let score = (0.35 * wind + 0.2 * size + 0.25 * dir + 0.1 * period + 0.1 * tide) * sizeGate;
+  // "Is there actually a wave" gate: fades in from 0 (dead flat, ≤0.08 m) to full
+  // weight (clearly rideable, ≥0.35 m). Keeps wind/tide alone (which don't measure
+  // size) from faking a score on a truly flat day, without flooring small clean days.
+  const sizeGate = clamp((breakH - 0.08) / 0.27, 0, 1);
+  let score = (0.45 * wind + 0.15 * size + 0.15 * dir + 0.15 * period + 0.1 * tide) * sizeGate;
   return {
     score: Math.round(score * 10) / 10,
     breakH,
