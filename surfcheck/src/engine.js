@@ -28,14 +28,27 @@ export function exposure(beach, hr) {
   return beach.expoBase * falloff * seaward;
 }
 
+// Pick whichever swell train (primary or secondary) delivers the most breaking
+// energy at this beach. Byron's bay spots often ride a secondary ENE train
+// while the primary S swell marches straight past the cape — scoring only the
+// primary had Wategos "flat" on a day Surfline called Fair.
+export function pickSwell(beach, hr) {
+  const prim = { swellH: hr.swellH, swellP: hr.swellP, swellDir: hr.swellDir };
+  if (!hr.s2H) return prim;
+  const sec = { swellH: hr.s2H, swellP: hr.s2P, swellDir: hr.s2Dir };
+  const energy = s => s.swellH * Math.sqrt(s.swellP / 10) * exposure(beach, s);
+  return energy(sec) > energy(prim) ? sec : prim;
+}
+
 // Estimated breaking-face height (trough to lip, what you eyeball from the sand).
 // Komar & Gaughan (1972): Hb = 0.39 g^(1/5) (T·H0²)^(2/5), fed with the swell that
 // actually reaches the lineup. Rayleigh wave-height stats give the session range:
 // typical waves ≈ 0.7×Hb, bigger sets ≈ 1.3×Hb.
 export function faceHeight(beach, hr) {
-  const h0 = hr.swellH * exposure(beach, hr);
+  const sw = pickSwell(beach, hr);
+  const h0 = sw.swellH * exposure(beach, sw);
   if (h0 < 0.05) return { lo: 0, hi: 0 };
-  const hb = 0.39 * 9.81 ** 0.2 * (hr.swellP * h0 * h0) ** 0.4;
+  const hb = 0.39 * 9.81 ** 0.2 * (sw.swellP * h0 * h0) ** 0.4;
   return { lo: hb * 0.7, hi: hb * 1.3 };
 }
 
@@ -55,8 +68,9 @@ export const faceLabel = hi =>
 // wind .45, size .15, direction .15, period .15, tide .10
 export function scoreHour(beach, hr, skillName) {
   const s = SKILLS[skillName];
-  const eff = hr.swellH * Math.sqrt(hr.swellP / 10); // period-weighted effective height
-  const expo = exposure(beach, hr);
+  const sw = pickSwell(beach, hr);
+  const eff = sw.swellH * Math.sqrt(sw.swellP / 10); // period-weighted effective height
+  const expo = exposure(beach, sw);
   const breakH = eff * expo;
   const offDir = (beach.facing + 180) % 360;
   const wd = angDiff(hr.windDir, offDir);
@@ -73,7 +87,7 @@ export function scoreHour(beach, hr, skillName) {
   const spread = breakH < s.center ? s.spread * 1.7 : s.spread;
   const size = 10 * Math.exp(-(((breakH - s.center) / spread) ** 2));
   const dir = Math.min(10, expo * 10);
-  const period = hr.swellP < 7 ? 3 : hr.swellP < 8 ? 5 : hr.swellP < 10 ? 7 : hr.swellP < 11 ? 8.5 : 10;
+  const period = sw.swellP < 7 ? 3 : sw.swellP < 8 ? 5 : sw.swellP < 10 ? 7 : sw.swellP < 11 ? 8.5 : 10;
   const tide = 10 - 3.5 * (2 * Math.abs(hr.tideN - 0.5)) ** 2;
   // "Is there actually a wave" gate: fades in from 0 (dead flat, ≤0.08 m) to full
   // weight (clearly rideable, ≥0.35 m). Keeps wind/tide alone (which don't measure
@@ -155,16 +169,17 @@ export function buildModel(datasets, skillName, nowT, baseDate) {
         const hh = hours[t];
         const s2 = scoreHour(b, hh, skillName);
         const f2 = faceHeight(b, hh);
+        const sw2 = pickSwell(b, hh); // display the train this beach actually rides
         hrs.push({
           h, score: s2.score,
-          swellH: hh.swellH, swellP: hh.swellP, swellDir: hh.swellDir,
+          swellH: sw2.swellH, swellP: sw2.swellP, swellDir: sw2.swellDir,
           windSpd: hh.windSpd, windDir: hh.windDir, windTag: s2.windTag, tideN: hh.tideN,
           faceLo: f2.lo, faceHi: f2.hi,
         });
         if (h >= Math.floor(sr) && h <= Math.ceil(ss)) {
           best = Math.max(best, s2.score);
-          swMin = Math.min(swMin, hh.swellH);
-          swMax = Math.max(swMax, hh.swellH);
+          swMin = Math.min(swMin, sw2.swellH);
+          swMax = Math.max(swMax, sw2.swellH);
           const r = (hh.windDir * Math.PI) / 180;
           vx += Math.sin(r) * hh.windSpd; vy += Math.cos(r) * hh.windSpd; spdSum += hh.windSpd; n++;
         }
@@ -180,11 +195,12 @@ export function buildModel(datasets, skillName, nowT, baseDate) {
       });
       hourly.push(hrs);
     }
+    const swNow = pickSwell(b, hr);
     return {
       id: b.id, name: b.name, notes: b.notes, cams: b.cams, sst,
-      score: sc.score, label: scoreLabel(sc.score), why: whyLine(b, hr, sc, rising),
+      score: sc.score, label: scoreLabel(sc.score), why: whyLine(b, { ...hr, ...swNow }, sc, rising),
       face: (() => { const f = faceHeight(b, hr); return { ...f, label: faceLabel(f.hi) }; })(),
-      swell: { h: hr.swellH, p: hr.swellP, dirFrom: hr.swellDir, going: (hr.swellDir + 180) % 360 },
+      swell: { h: swNow.swellH, p: swNow.swellP, dirFrom: swNow.swellDir, going: (swNow.swellDir + 180) % 360 },
       wind: { spd: hr.windSpd, dirFrom: hr.windDir, going: (hr.windDir + 180) % 360, tag: sc.windTag },
       tide: {
         stage: tideStage(hr.tideN),

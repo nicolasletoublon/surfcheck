@@ -9,7 +9,9 @@ const FORECAST_DAYS = 5;
 
 const marineUrl = b =>
   `https://marine-api.open-meteo.com/v1/marine?latitude=${b.lat}&longitude=${b.lon}` +
-  `&hourly=swell_wave_height,swell_wave_direction,swell_wave_period,sea_level_height_msl,sea_surface_temperature` +
+  `&hourly=swell_wave_height,swell_wave_direction,swell_wave_period,` +
+  `secondary_swell_wave_height,secondary_swell_wave_direction,secondary_swell_wave_period,` +
+  `sea_level_height_msl,sea_surface_temperature` +
   `&forecast_days=${FORECAST_DAYS}&timezone=${encodeURIComponent(TIMEZONE)}`;
 
 const forecastUrl = b =>
@@ -69,6 +71,11 @@ function assemble(beach, marine, forecast) {
   const swellH = fillNulls(mh.swell_wave_height);
   const swellP = fillNulls(mh.swell_wave_period, 8);
   const swellDir = fillNulls(mh.swell_wave_direction, 135);
+  // Secondary swell train (may be absent in cached pre-upgrade responses).
+  const zeros = mh.swell_wave_height.map(() => 0);
+  const s2H = fillNulls(mh.secondary_swell_wave_height ?? zeros, 0);
+  const s2P = fillNulls(mh.secondary_swell_wave_period ?? zeros, 8);
+  const s2Dir = fillNulls(mh.secondary_swell_wave_direction ?? zeros, 90);
   const tideArr = fillNulls(mh.sea_level_height_msl);
   const windSpd = fillNulls(fh.wind_speed_10m);
   const windDir = fillNulls(fh.wind_direction_10m);
@@ -80,6 +87,7 @@ function assemble(beach, marine, forecast) {
     hours.push({
       t: i,
       swellH: swellH[i], swellP: Math.max(1, swellP[i]), swellDir: swellDir[i],
+      s2H: s2H[i], s2P: Math.max(1, s2P[i]), s2Dir: s2Dir[i],
       windSpd: windSpd[i], windDir: windDir[i],
       tide: tideArr[i], tideN: (tideArr[i] - tMin) / tSpan,
     });

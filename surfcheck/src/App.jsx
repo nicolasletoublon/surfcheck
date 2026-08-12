@@ -441,7 +441,13 @@ function Sheet({ b, day, setDay, onClose, nowT, shark }) {
 
 const loadFavs = () => { try { return JSON.parse(localStorage.getItem('dp-favs')) || []; } catch { return []; } };
 const loadSkill = () => { const s = localStorage.getItem('dp-skill'); return s && SKILLS[s] ? s : 'Intermediate'; };
-const loadRegion = () => { const r = localStorage.getItem('dp-region'); return REGIONS.some(x => x.id === r) ? r : 'sydney'; };
+// URL hash wins (shareable links like …/#byron), then last choice, then Sydney.
+const loadRegion = () => {
+  const h = window.location.hash.slice(1);
+  if (REGIONS.some(x => x.id === h)) return h;
+  const r = localStorage.getItem('dp-region');
+  return REGIONS.some(x => x.id === r) ? r : 'sydney';
+};
 
 export default function App() {
   const [skill, setSkill] = useState(loadSkill);
@@ -472,6 +478,20 @@ export default function App() {
 
   useEffect(() => { load(); }, [region]);
   useEffect(() => { fetchSharks().then(setSharks); }, []);
+
+  // Keep the URL shareable: hash always reflects the active region, and
+  // hash edits / links navigated within the tab switch the region.
+  useEffect(() => {
+    if (window.location.hash !== `#${region}`) history.replaceState(null, '', `#${region}`);
+  }, [region]);
+  useEffect(() => {
+    const onHash = () => {
+      const h = window.location.hash.slice(1);
+      if (REGIONS.some(x => x.id === h)) { localStorage.setItem('dp-region', h); setSheetId(null); setRegion(h); }
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60_000);
     return () => clearInterval(id);

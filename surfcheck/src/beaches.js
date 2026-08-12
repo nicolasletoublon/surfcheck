@@ -42,15 +42,15 @@ export const BEACHES = [
   // Byron Bay. The bay beaches (Pass/Wategos/Main) face north and only get swell
   // wrapping around Cape Byron — smaller but cleaner; S–SW wind is offshore there.
   // Tallow side faces due east and cops everything.
-  { id: 'thepass',  name: 'The Pass',   region: 'byron', lat: -28.6365, lon: 153.6270, facing: 355, bestDir: 100, dirWidth: 55, expoBase: 0.45, notes: 'World-class right point; swell wraps around the cape — smaller but perfect. Crowded.',
+  { id: 'thepass',  name: 'The Pass',   region: 'byron', lat: -28.6365, lon: 153.6270, facing: 355, bestDir: 100, dirWidth: 55, expoBase: 0.65, notes: 'World-class right point; swell wraps around the cape — smaller but perfect. Crowded.',
     cams: [
       { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/the-pass-byron-bay/5842041f4e65fad6a7708bef' },
     ] },
-  { id: 'wategos',  name: 'Wategos',    region: 'byron', lat: -28.6355, lon: 153.6335, facing: 15,  bestDir: 80,  dirWidth: 55, expoBase: 0.35, notes: 'Mellow longboard rights tucked under Cape Byron',
+  { id: 'wategos',  name: 'Wategos',    region: 'byron', lat: -28.6355, lon: 153.6335, facing: 15,  bestDir: 80,  dirWidth: 55, expoBase: 0.6, notes: 'Mellow longboard rights tucked under Cape Byron',
     cams: [
       { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/wategos/584204204e65fad6a77092f2' },
     ] },
-  { id: 'mainbyron', name: 'Main / Wreck', region: 'byron', lat: -28.6415, lon: 153.6115, facing: 0, bestDir: 60, dirWidth: 60, expoBase: 0.5, notes: 'The Wreck bombie throws punchy peaks right off town',
+  { id: 'mainbyron', name: 'Main / Wreck', region: 'byron', lat: -28.6415, lon: 153.6115, facing: 0, bestDir: 60, dirWidth: 60, expoBase: 0.7, notes: 'The Wreck bombie throws punchy peaks right off town',
     cams: [
       { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/main-beach-byron-bay/5fe0f932f167970e1d4c9516' },
     ] },
