@@ -3,7 +3,7 @@ import {
   Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
-import { BEACHES, SKILL_NAMES, SKILLS } from './beaches.js';
+import { BEACHES, REGIONS, SKILL_NAMES, SKILLS } from './beaches.js';
 import { buildModel, compass, fmtClock, scoreLabel, tideStage, wetsuit } from './engine.js';
 import { fetchBeach, fetchSharks, sydneyNow } from './api.js';
 
@@ -124,10 +124,10 @@ function SharkChip({ info }) {
 }
 
 // Summary card: latest sighting per tracked beach in the feed window.
-function SharkWatch({ sharks }) {
+function SharkWatch({ sharks, beaches }) {
   const rows = [];
   const seen = new Set(); // one row per sighting even when it sits near two of our beaches
-  for (const r of BEACHES.map(b => ({ b, info: sharkInfo(b, sharks) })).filter(r => r.info).sort((a, b) => a.info.ageH - b.info.ageH)) {
+  for (const r of beaches.map(b => ({ b, info: sharkInfo(b, sharks) })).filter(r => r.info).sort((a, b) => a.info.ageH - b.info.ageH)) {
     if (!seen.has(r.info.latest.msg)) { seen.add(r.info.latest.msg); rows.push(r); }
   }
   return (
@@ -441,9 +441,11 @@ function Sheet({ b, day, setDay, onClose, nowT, shark }) {
 
 const loadFavs = () => { try { return JSON.parse(localStorage.getItem('dp-favs')) || []; } catch { return []; } };
 const loadSkill = () => { const s = localStorage.getItem('dp-skill'); return s && SKILLS[s] ? s : 'Intermediate'; };
+const loadRegion = () => { const r = localStorage.getItem('dp-region'); return REGIONS.some(x => x.id === r) ? r : 'sydney'; };
 
 export default function App() {
   const [skill, setSkill] = useState(loadSkill);
+  const [region, setRegion] = useState(loadRegion);
   const [favs, setFavs] = useState(loadFavs);
   const [sheetId, setSheetId] = useState(null);
   const [day, setDay] = useState(0);
@@ -452,8 +454,10 @@ export default function App() {
   const [, setTick] = useState(0);        // re-render each minute for "updated X min ago" / now-hour rollover
   const isDesktop = useMediaQuery('(min-width: 1000px)');
 
+  const regionBeaches = BEACHES.filter(b => b.region === region);
+
   const load = (only = null) => {
-    const targets = only ? BEACHES.filter(b => b.id === only) : BEACHES;
+    const targets = only ? BEACHES.filter(b => b.id === only) : BEACHES.filter(b => b.region === region);
     setData(prev => {
       const next = { ...prev };
       targets.forEach(b => { next[b.id] = { status: 'loading' }; });
@@ -466,11 +470,14 @@ export default function App() {
     });
   };
 
-  useEffect(() => { load(); fetchSharks().then(setSharks); }, []);
+  useEffect(() => { load(); }, [region]);
+  useEffect(() => { fetchSharks().then(setSharks); }, []);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  const pickRegion = id => { localStorage.setItem('dp-region', id); setSheetId(null); setRegion(id); };
 
   const sharkByBeach = useMemo(() => {
     const m = {};
@@ -478,12 +485,12 @@ export default function App() {
     return m;
   }, [sharks]);
 
-  const ready = BEACHES.filter(b => data[b.id]?.status === 'ok');
+  const ready = regionBeaches.filter(b => data[b.id]?.status === 'ok');
   const model = useMemo(() => {
     if (!ready.length) return null;
     const { nowT, baseDate } = sydneyNow();
     return buildModel(ready.map(b => data[b.id].dataset), skill, nowT, baseDate);
-  }, [data, skill, ready.length, Math.floor(Date.now() / 60_000)]);
+  }, [data, skill, region, ready.length, Math.floor(Date.now() / 60_000)]);
 
   const ranked = model
     ? [...model.beaches].sort((a, b) => (favs.includes(b.id) - favs.includes(a.id)) || (b.score - a.score))
@@ -514,7 +521,12 @@ export default function App() {
           <div className="dp-header-top">
             <div>
               <div className="dp-title">DAWN PATROL<span className="dot">.</span></div>
-              <div className="dp-subtitle">Sydney · Eastern Suburbs</div>
+              <div className="dp-region">
+                {REGIONS.map(r => (
+                  <button key={r.id} className={r.id === region ? 'on' : ''} onClick={() => pickRegion(r.id)}>{r.name}</button>
+                ))}
+              </div>
+              <div className="dp-subtitle">{REGIONS.find(r => r.id === region)?.sub}</div>
             </div>
             <div className="dp-updated">updated {updatedAgo}</div>
           </div>
@@ -541,7 +553,7 @@ export default function App() {
           </div>
         )}
 
-        {sharks && <SharkWatch sharks={sharks} />}
+        {sharks && <SharkWatch sharks={sharks} beaches={regionBeaches} />}
 
         {featured.length > 0 && (
           <section className="dp-panels">
@@ -560,10 +572,10 @@ export default function App() {
               shark={sharkByBeach[b.id]}
             />
           ))}
-          {BEACHES.filter(b => data[b.id]?.status === 'loading').map(b => (
+          {regionBeaches.filter(b => data[b.id]?.status === 'loading').map(b => (
             <div key={b.id} className="dp-skel" aria-label={`Loading ${b.name}…`} />
           ))}
-          {BEACHES.filter(b => data[b.id]?.status === 'error').map(b => (
+          {regionBeaches.filter(b => data[b.id]?.status === 'error').map(b => (
             <div key={b.id} className="dp-error">
               <div>
                 <div className="dp-error-name">{b.name}</div>

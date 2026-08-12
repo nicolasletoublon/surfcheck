@@ -35,9 +35,13 @@ function parseDate(s) {
 
 const cutoff = Date.now() - KEEP_DAYS * 864e5;
 
-// Greater Sydney coastal box — the app only tracks Sydney beaches, and keeping
-// the whole NSW/AU feed would triple the payload for nothing.
-const inSydney = (lat, lon) => lat >= -34.3 && lat <= -33.3 && lon >= 150.7 && lon <= 151.7;
+// Coastal boxes around the app's regions (Sydney + Byron Bay) — keeping the
+// whole NSW/AU feed would triple the payload for nothing.
+const BOXES = [
+  { lat: [-34.3, -33.3], lon: [150.7, 151.7] },   // Greater Sydney
+  { lat: [-28.95, -28.5], lon: [153.45, 153.75] }, // Byron Bay / Ballina
+];
+const inSydney = (lat, lon) => BOXES.some(b => lat >= b.lat[0] && lat <= b.lat[1] && lon >= b.lon[0] && lon <= b.lon[1]);
 
 function trimFeature(f) {
   const p = f.properties ?? {};

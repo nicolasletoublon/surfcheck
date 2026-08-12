@@ -60,6 +60,13 @@ button { font-family: 'Figtree', sans-serif; }
 .dp-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 36px; line-height: 1; letter-spacing: 1px; }
 .dp-title .dot { color: var(--dp-coral); }
 .dp-subtitle { font-size: 13px; color: var(--dp-soft); margin-top: 4px; }
+.dp-region { display: flex; gap: 6px; margin-top: 8px; }
+.dp-region button {
+  border: 1px solid var(--dp-line); background: transparent; color: var(--dp-soft);
+  font-size: 12px; font-weight: 700; letter-spacing: .6px; border-radius: 999px;
+  padding: 4px 12px; cursor: pointer; transition: color .15s, border-color .15s;
+}
+.dp-region button.on { border-color: var(--dp-teal); color: var(--dp-teal); background: var(--dp-tag-off-bg); }
 .dp-updated { font-size: 12px; color: var(--dp-soft); padding-bottom: 3px; white-space: nowrap; }
 .dp-seg { display: flex; gap: 4px; background: var(--dp-card2); border: 1px solid var(--dp-line); border-radius: 999px; padding: 4px; }
 .dp-seg button { flex: 1; border: none; cursor: pointer; font-size: 13px; font-weight: 600; padding: 8px 0; border-radius: 999px; background: transparent; color: var(--dp-soft); transition: background .15s; }
