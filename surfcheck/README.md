@@ -1,6 +1,8 @@
-# Dawn Patrol 🌊
+# Dawn Patrol
 
-A phone-first surf dashboard for Sydney's Eastern Suburbs beaches — Bondi, Tamarama, Bronte, Coogee, and Maroubra. Ranks beaches by a computed 0–10 surf score, shows a 5-day outlook, and answers "where should I paddle out this morning?"
+A phone-first surf dashboard that ranks beaches by a computed 0–10 surf score, shows a 5-day outlook, and answers "where should I paddle out this morning?" 🌊
+
+Two regions, switchable in the header (persisted): **Sydney** (Bondi, Tamarama, Bronte, Maroubra, Manly, Dee Why) and **Byron Bay** (The Pass, Wategos, Main/Wreck, Tallows, Suffolk Park, Broken Head). Adding a region is a `REGIONS` entry plus beaches tagged with its id in `src/beaches.js` — and, for shark coverage, a coastal box in `scripts/build-shark-data.mjs`.
 
 **Live:** https://nicolasletoublon.github.io/surfcheck/
 
