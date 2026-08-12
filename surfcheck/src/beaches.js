@@ -50,19 +50,19 @@ export const BEACHES = [
     cams: [
       { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/wategos/584204204e65fad6a77092f2' },
     ] },
-  { id: 'mainbyron', name: 'Main / Wreck', region: 'byron', lat: -28.6415, lon: 153.6115, facing: 0, bestDir: 60, dirWidth: 60, expoBase: 0.7, notes: 'The Wreck bombie throws punchy peaks right off town',
+  { id: 'mainbyron', name: 'Main / Wreck', region: 'byron', lat: -28.6415, lon: 153.6115, facing: 0, bestDir: 60, dirWidth: 60, expoBase: 0.55, notes: 'The Wreck bombie throws punchy peaks right off town; needs E–NE swell',
     cams: [
       { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/main-beach-byron-bay/5fe0f932f167970e1d4c9516' },
     ] },
-  { id: 'tallows',  name: 'Tallows',    region: 'byron', lat: -28.6580, lon: 153.6170, facing: 90,  bestDir: 110, dirWidth: 85, expoBase: 1.0,  notes: 'Fully exposed and raw; handles all the swell — watch the sweep',
+  { id: 'tallows',  name: 'Tallows',    region: 'byron', lat: -28.6580, lon: 153.6170, facing: 105, bestDir: 110, dirWidth: 85, expoBase: 1.0,  notes: 'The S-swell magnet south of the cape; best on NW wind — watch the sweep',
     cams: [
       { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/tallows/5842041f4e65fad6a7708c09' },
     ] },
-  { id: 'suffolk',  name: 'Suffolk Park', region: 'byron', lat: -28.6900, lon: 153.6135, facing: 90, bestDir: 120, dirWidth: 85, expoBase: 0.9, notes: 'South Tallow banks, quieter than town',
+  { id: 'suffolk',  name: 'Suffolk Park', region: 'byron', lat: -28.6900, lon: 153.6135, facing: 105, bestDir: 120, dirWidth: 85, expoBase: 0.9, notes: 'South Tallow banks, quieter than town',
     cams: [
       { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/suffolk-park/584204204e65fad6a77092f4' },
     ] },
-  { id: 'brokenhead', name: 'Broken Head', region: 'byron', lat: -28.7075, lon: 153.6115, facing: 60, bestDir: 130, dirWidth: 75, expoBase: 0.7, notes: 'Right point over sand and rock; needs SE swell and the right sand',
+  { id: 'brokenhead', name: 'Broken Head', region: 'byron', lat: -28.7075, lon: 153.6115, facing: 45, bestDir: 95, dirWidth: 65, expoBase: 0.55, notes: 'Sand-dependent right point; best on E swell and S wind — unforgettable when it lines up',
     cams: [
       { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/broken-head/5842041f4e65fad6a7708bf3' },
     ] },
