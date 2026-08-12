@@ -1,4 +1,4 @@
-// Dawn Patrol — surf-score engine.
+// Dawnie — surf-score engine.
 // Ported from the Claude Design handoff (design_handoff_dawn_patrol/beaches.js),
 // with the mock generator replaced by real Open-Meteo hourly data.
 //

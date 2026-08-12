@@ -540,7 +540,7 @@ export default function App() {
         <header className="dp-header">
           <div className="dp-header-top">
             <div>
-              <div className="dp-title">DAWN PATROL<span className="dot">.</span></div>
+              <div className="dp-title">DAWNIE<span className="dot">.</span></div>
               <div className="dp-region">
                 {REGIONS.map(r => (
                   <button key={r.id} className={r.id === region ? 'on' : ''} onClick={() => pickRegion(r.id)}>{r.name}</button>

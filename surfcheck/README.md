@@ -1,4 +1,4 @@
-# Dawn Patrol
+# Dawnie
 
 A phone-first surf dashboard that ranks beaches by a computed 0–10 surf score, shows a 5-day outlook, and answers "where should I paddle out this morning?" 🌊
 
@@ -46,7 +46,7 @@ One line in `src/beaches.js` — coords, the direction the beach faces, which sw
 
 ## How the score works
 
-Weighted 0–10 per hour: wind 35% (offshore = beach facing + 180°, penalties scale with skill), swell size 20% (gaussian around the skill band's ideal, using period-weighted effective height × beach exposure), swell direction vs beach exposure 25%, period 10% (<7 s windswell penalised, ≥11 s groundswell bonus), tide 10% (mid tide best). Tiny break heights cap the score (Flat). Labels: <2 Flat, <4 Poor, <7 Fair, <8.5 Good, ≥8.5 Firing.
+Weighted 0–10 per hour, calibrated against Surfline ratings: wind 45% (offshore = beach facing + 180°; strong offshore penalised past ~12 kn), swell size 15% (gaussian around the skill band's ideal, asymmetric — undersized is far less punished than oversized), direction 15%, period 15%, tide 10% (mid best). Each beach is scored with whichever of Open-Meteo's two swell trains delivers the most energy through its gaussian exposure window (off-axis swell arrives smaller, not absent). A continuous size gate zeroes out truly flat days without flooring small clean ones. Labels: <2 Flat, <4 Poor, <7 Fair, <8.5 Good, ≥8.5 Firing.
 
 ---
 
