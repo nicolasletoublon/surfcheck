@@ -1,4 +1,4 @@
-// Dawnie — surf-score engine.
+// Letouswell — surf-score engine.
 // Ported from the Claude Design handoff (design_handoff_dawn_patrol/beaches.js),
 // with the mock generator replaced by real Open-Meteo hourly data.
 //

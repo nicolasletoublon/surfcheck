@@ -1,4 +1,4 @@
-# Dawnie
+# Letouswell
 
 A phone-first surf dashboard that ranks beaches by a computed 0–10 surf score, shows a 5-day outlook, and answers "where should I paddle out this morning?" 🌊
 
