@@ -439,8 +439,29 @@ function Sheet({ b, day, setDay, onClose, nowT, shark }) {
   );
 }
 
+function ThemeToggle({ theme, onToggle }) {
+  return (
+    <button className="dp-theme-btn" onClick={onToggle} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+      {theme === 'dark' ? (
+        // sun — click for light
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="4.2" />
+          <path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5 5l1.8 1.8M17.2 17.2 19 19M19 5l-1.8 1.8M6.8 17.2 5 19" />
+        </svg>
+      ) : (
+        // moon — click for dark
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1Z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 const loadFavs = () => { try { return JSON.parse(localStorage.getItem('dp-favs')) || []; } catch { return []; } };
 const loadSkill = () => { const s = localStorage.getItem('dp-skill'); return s && SKILLS[s] ? s : 'Intermediate'; };
+// Dark by default no matter the OS preference; light only if explicitly chosen.
+const loadTheme = () => (localStorage.getItem('dp-theme') === 'light' ? 'light' : 'dark');
 // URL hash wins (shareable links like …/#byron), then last choice, then Sydney.
 const loadRegion = () => {
   const h = window.location.hash.slice(1);
@@ -451,6 +472,7 @@ const loadRegion = () => {
 
 export default function App() {
   const [skill, setSkill] = useState(loadSkill);
+  const [theme, setTheme] = useState(loadTheme);
   const [region, setRegion] = useState(loadRegion);
   const [favs, setFavs] = useState(loadFavs);
   const [sheetId, setSheetId] = useState(null);
@@ -478,6 +500,14 @@ export default function App() {
 
   useEffect(() => { load(); }, [region]);
   useEffect(() => { fetchSharks().then(setSharks); }, []);
+
+  // Apply the theme (dark by default, whatever the OS says) and keep the
+  // browser chrome colour in step.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-dp-theme', theme);
+    localStorage.setItem('dp-theme', theme);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#051c29' : '#e3f1f5');
+  }, [theme]);
 
   // Keep the URL shareable: hash always reflects the active region, and
   // hash edits / links navigated within the tab switch the region.
@@ -548,7 +578,10 @@ export default function App() {
               </div>
               <div className="dp-subtitle">{REGIONS.find(r => r.id === region)?.sub}</div>
             </div>
-            <div className="dp-updated">updated {updatedAgo}</div>
+            <div className="dp-header-right">
+              <div className="dp-updated">updated {updatedAgo}</div>
+              <ThemeToggle theme={theme} onToggle={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))} />
+            </div>
           </div>
           <div className="dp-seg">
             {SKILL_NAMES.map(name => (

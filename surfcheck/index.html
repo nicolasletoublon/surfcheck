@@ -7,6 +7,8 @@
     <meta name="description" content="Letouswell — live surf check for Sydney and Byron Bay" />
     <title>Letouswell · Sydney &amp; Byron surf check</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Dark by default regardless of OS preference; applied pre-render to avoid a light flash. -->
+    <script>document.documentElement.setAttribute('data-dp-theme', localStorage.getItem('dp-theme') === 'light' ? 'light' : 'dark');</script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

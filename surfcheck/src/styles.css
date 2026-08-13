@@ -68,6 +68,13 @@ button { font-family: 'Figtree', sans-serif; }
 }
 .dp-region button.on { border-color: var(--dp-teal); color: var(--dp-teal); background: var(--dp-tag-off-bg); }
 .dp-updated { font-size: 12px; color: var(--dp-soft); padding-bottom: 3px; white-space: nowrap; }
+.dp-header-right { display: flex; align-items: center; gap: 10px; }
+.dp-theme-btn {
+  width: 32px; height: 32px; flex-shrink: 0; border-radius: 999px;
+  border: 1px solid var(--dp-line); background: var(--dp-card2); color: var(--dp-soft);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.dp-theme-btn:hover { color: var(--dp-ink); border-color: var(--dp-teal); }
 .dp-seg { display: flex; gap: 4px; background: var(--dp-card2); border: 1px solid var(--dp-line); border-radius: 999px; padding: 4px; }
 .dp-seg button { flex: 1; border: none; cursor: pointer; font-size: 13px; font-weight: 600; padding: 8px 0; border-radius: 999px; background: transparent; color: var(--dp-soft); transition: background .15s; }
 .dp-seg button.on { background: var(--dp-teal); color: var(--dp-bg0); }
