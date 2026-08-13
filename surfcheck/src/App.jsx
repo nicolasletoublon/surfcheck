@@ -211,7 +211,9 @@ function ChartTip({ active, payload }) {
   );
 }
 
-function HourlyChart({ hours, isToday, nowT }) {
+function HourlyChart({ hours, isToday, nowT, sun }) {
+  const firstLight = sun ? Math.max(0, sun.sr - 25 / 60) : null;
+  const lastLight = sun ? Math.min(23, sun.ss + 25 / 60) : null;
   return (
     <ResponsiveContainer width="100%" height={190}>
       <ComposedChart data={hours} margin={{ top: 16, right: 8, bottom: 0, left: -6 }}>
@@ -251,6 +253,13 @@ function HourlyChart({ hours, isToday, nowT }) {
             y1={0} y2={0.05} fill={r.color} fillOpacity={0.9} strokeOpacity={0}
           />
         ))}
+        {/* Night shading — outside first light → last light it isn't surfable anyway */}
+        {firstLight != null && firstLight > 0 && (
+          <ReferenceArea yAxisId="m" x1={0} x2={firstLight} fill="#000" fillOpacity={0.3} strokeOpacity={0} />
+        )}
+        {lastLight != null && lastLight < 23 && (
+          <ReferenceArea yAxisId="m" x1={lastLight} x2={23} fill="#000" fillOpacity={0.3} strokeOpacity={0} />
+        )}
         {isToday && nowT != null && (
           <ReferenceLine
             yAxisId="m" x={Math.min(23, Math.max(0, nowT))}
@@ -275,7 +284,7 @@ function ChartCard({ b, day, nowT }) {
           <span><span className="dp-dot" style={{ background: 'var(--dp-green)' }} />good window</span>
         </div>
       </div>
-      <HourlyChart hours={b.hourly[day] ?? []} isToday={day === 0} nowT={nowT} />
+      <HourlyChart hours={b.hourly[day] ?? []} isToday={day === 0} nowT={nowT} sun={b.sun[Math.min(day, b.sun.length - 1)]} />
     </div>
   );
 }
@@ -336,6 +345,11 @@ function Extras({ b, day }) {
         <div className="dp-extra-eyebrow">FIRST LIGHT</div>
         <div className="dp-extra-big">{fmtClock(sun.sr - 25 / 60)}</div>
         <div className="dp-extra-small">sunrise {fmtClock(sun.sr)}</div>
+      </div>
+      <div className="dp-extra">
+        <div className="dp-extra-eyebrow">BOARD</div>
+        <div className="dp-extra-big dp-extra-board">{b.board}</div>
+        <div className="dp-extra-small">for your level today</div>
       </div>
       <div className="dp-extra">
         <div className="dp-extra-eyebrow">SURFCAMS</div>
@@ -404,13 +418,98 @@ function BeachPanel({ b, fav, onToggleFav, nowT, shark }) {
   );
 }
 
-function Sheet({ b, day, setDay, onClose, nowT, shark }) {
-  // Lock background scroll while the sheet is open (mobile scroll-chaining fix).
+// Lock background scroll while a sheet is open (mobile scroll-chaining fix).
+function useBodyScrollLock() {
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
+}
+
+// "How to read this" — plain-words guide to every indicator.
+function HelpSheet({ onClose }) {
+  useBodyScrollLock();
+  const Dot = ({ c }) => <span className="dp-dot" style={{ background: c }} />;
+  return (
+    <>
+      <div className="dp-scrim" onClick={onClose} />
+      <div className="dp-sheet dp-help">
+        <div className="dp-handle" />
+        <div className="dp-sheet-head">
+          <div style={{ flex: 1 }}><div className="dp-sheet-name">How to read this</div></div>
+          <button className="dp-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <h4>Score (0–10)</h4>
+        <p>
+          One number per beach for the conditions <em>right now</em>, at your level. Mostly wave
+          quality: clean beats big. <Dot c="var(--dp-flat)" /> Flat &lt;2 · <Dot c="var(--dp-poor)" /> Poor &lt;4 ·{' '}
+          <Dot c="var(--dp-amber)" /> Fair &lt;7 · <Dot c="var(--dp-green)" /> Good &lt;8.5 · <Dot c="var(--dp-violet)" /> Firing 8.5+.
+        </p>
+
+        <h4>Faces (e.g. "0.7–1.3 m · chest–shoulder")</h4>
+        <p>
+          Estimated wave-face height — what you actually eyeball from the sand, bottom to lip. The
+          range spans the ordinary waves to the bigger sets, and the body label is judged on the sets:
+          that's what decides if you paddle out.
+        </p>
+
+        <h4>Swell (e.g. "0.9 m · 12 s SSE")</h4>
+        <p>
+          Open-ocean swell height, <strong>period</strong>, and the direction it comes from. Period is the
+          secret: it's the energy in each wave. 1 m at 12 s makes bigger, better-organised waves than
+          1 m at 7 s — long-period groundswell travels from distant storms; short-period windswell is
+          local chop. Each beach is scored on whichever of the two active swell trains suits it best.
+        </p>
+
+        <h4>Wind</h4>
+        <p>
+          <span className="dp-chip dp-tag-offshore">OFFSHORE</span> blows land→sea: it grooms the face and
+          holds the wave up — best. <span className="dp-chip dp-tag-cross-shore">CROSS-SHORE</span> runs along
+          the beach: bumpy but workable. <span className="dp-chip dp-tag-onshore">ONSHORE</span> blows sea→land:
+          crumbly mush — worst. Under ~5 kn of anything = glassy, which is also gold. Too much offshore
+          (15 kn+) chops the face and makes the paddle miserable.
+        </p>
+
+        <h4>Tide</h4>
+        <p>
+          Mid tide is the safe bet at most beach breaks — dead low gets dumpy, full high gets fat and
+          slow. The grey curve on the chart is the tide through the day.
+        </p>
+
+        <h4>The chart</h4>
+        <p>
+          <Dot c="var(--dp-teal)" /> swell height · <Dot c="var(--dp-coral)" /> wind (dashed) ·{' '}
+          <Dot c="var(--dp-soft)" /> tide. Green bands = hours scoring Good or better. The coloured strip
+          along the bottom grades every hour (same colours as the score). Darkened ends = before first
+          light / after last light — not surfable. Tap or hover any hour for the details. The mini strip
+          under each day pill shows that whole day at a glance.
+        </p>
+
+        <h4>Board</h4>
+        <p>
+          A suggestion from the face height, swell power, and your level: small and weak wants volume
+          (log, fish); punchy chest-high+ wants a shortboard; overhead wants a step-up. Take it as a
+          nudge, not gospel.
+        </p>
+
+        <h4>Shark watch</h4>
+        <p>
+          Recent sightings and tagged-shark detections near these beaches (NSW SharkSmart + Dorsal). A
+          fin badge means activity in the last 7 days — red if under 24 h and the beach hasn't reopened.
+        </p>
+
+        <p className="dp-help-foot">
+          Scores are a heuristic from free model data — always check the cam before you drive.
+        </p>
+      </div>
+    </>
+  );
+}
+
+function Sheet({ b, day, setDay, onClose, nowT, shark }) {
+  useBodyScrollLock();
   return (
     <>
       <div className="dp-scrim" onClick={onClose} />
@@ -479,6 +578,7 @@ export default function App() {
   const [day, setDay] = useState(0);
   const [data, setData] = useState({});   // beachId -> { status, dataset?, error? }
   const [sharks, setSharks] = useState(null); // null = unavailable, feature hidden
+  const [helpOpen, setHelpOpen] = useState(false);
   const [, setTick] = useState(0);        // re-render each minute for "updated X min ago" / now-hour rollover
   const isDesktop = useMediaQuery('(min-width: 1000px)');
 
@@ -580,6 +680,7 @@ export default function App() {
             </div>
             <div className="dp-header-right">
               <div className="dp-updated">updated {updatedAgo}</div>
+              <button className="dp-theme-btn" onClick={() => setHelpOpen(true)} title="How to read this" aria-label="Help">?</button>
               <ThemeToggle theme={theme} onToggle={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))} />
             </div>
           </div>
@@ -645,6 +746,7 @@ export default function App() {
       </div>
 
       {sheetBeach && <Sheet b={sheetBeach} day={day} setDay={setDay} onClose={() => setSheetId(null)} nowT={nowT} shark={sharkByBeach[sheetBeach.id]} />}
+      {helpOpen && <HelpSheet onClose={() => setHelpOpen(false)} />}
     </div>
   );
 }

@@ -63,6 +63,21 @@ export const faceLabel = hi =>
   hi < 2.4 ? 'overhead' :
   hi < 3.2 ? 'well overhead' : 'double overhead+';
 
+// Suggested board for the set-wave face height, swell power, and skill level.
+export function boardPick(faceHi, swellP, skillName) {
+  if (faceHi < 0.3) return 'Coffee — come back later';
+  const powerful = swellP >= 10;
+  if (skillName === 'Beginner') {
+    if (faceHi > 1.5) return 'Big day — watch, or grab a coach';
+    return faceHi < 0.9 ? 'Softtop / longboard' : 'Softtop or midlength';
+  }
+  if (faceHi < 0.7) return 'Longboard / log';
+  if (faceHi < 1.1) return powerful ? 'Midlength or fish' : 'Fish / groveler';
+  if (faceHi < 1.8) return powerful ? 'Shortboard' : 'Shortboard, extra volume';
+  if (faceHi < 2.5) return skillName === 'Experienced' ? 'Shortboard / step-up' : 'Step-up — solid day';
+  return 'Step-up / gun — experts only';
+}
+
 // ---- Score. Weights re-calibrated against Surfline ratings (Aug 2026):
 // cleanliness dominates — a small glassy day should read Fair/Good, not Flat.
 // wind .45, size .15, direction .15, period .15, tide .10
@@ -196,10 +211,12 @@ export function buildModel(datasets, skillName, nowT, baseDate) {
       hourly.push(hrs);
     }
     const swNow = pickSwell(b, hr);
+    const faceNow = faceHeight(b, hr);
     return {
       id: b.id, name: b.name, notes: b.notes, cams: b.cams, sst,
       score: sc.score, label: scoreLabel(sc.score), why: whyLine(b, { ...hr, ...swNow }, sc, rising),
-      face: (() => { const f = faceHeight(b, hr); return { ...f, label: faceLabel(f.hi) }; })(),
+      face: { ...faceNow, label: faceLabel(faceNow.hi) },
+      board: boardPick(faceNow.hi, swNow.swellP, skillName),
       swell: { h: swNow.swellH, p: swNow.swellP, dirFrom: swNow.swellDir, going: (swNow.swellDir + 180) % 360 },
       wind: { spd: hr.windSpd, dirFrom: hr.windDir, going: (hr.windDir + 180) % 360, tag: sc.windTag },
       tide: {
