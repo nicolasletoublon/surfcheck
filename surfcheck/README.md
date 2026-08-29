@@ -2,7 +2,7 @@
 
 A phone-first surf dashboard that ranks beaches by a computed 0–10 surf score, shows a 5-day outlook, and answers "where should I paddle out this morning?" 🌊
 
-Two regions, switchable in the header (persisted): **Sydney** (Bondi, Tamarama, Bronte, Maroubra, Manly, Dee Why) **Byron Bay** (The Pass, Wategos, Main/Wreck, Tallows, Suffolk Park, Broken Head) and **Canggu** (Batu Bolong, Berawa, Echo Beach, Pererenan — on Bali time; regions carry their own timezone). Adding a region is a `REGIONS` entry plus beaches tagged with its id in `src/beaches.js` — and, for shark coverage, a coastal box in `scripts/build-shark-data.mjs`.
+Three regions, switchable in the header (persisted, shareable via URL hash): **Sydney** (Bondi, Tamarama, Bronte, Maroubra, Manly, Dee Why), **Byron Bay** (The Pass, Wategos, Main/Wreck, Tallows, Suffolk Park, Broken Head) and **Canggu** (Batu Bolong, Berawa, Echo Beach, Pererenan — on Bali time; regions carry their own timezone). Adding a region is a `REGIONS` entry plus beaches tagged with its id in `src/beaches.js` — and, for shark coverage, a coastal box in `scripts/build-shark-data.mjs`.
 
 **Live:** https://nicolasletoublon.github.io/surfcheck/
 
