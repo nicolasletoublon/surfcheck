@@ -119,7 +119,7 @@ export function scoreHour(beach, hr, skillName) {
 
 export const scoreLabel = s => (s < 2 ? 'Flat' : s < 4 ? 'Poor' : s < 7 ? 'Fair' : s < 8.5 ? 'Good' : 'Firing');
 
-export const wetsuit = t => (t > 21 ? 'Springsuit' : t >= 18 ? '3/2 steamer' : t >= 15 ? '3/2 + booties' : '4/3 steamer');
+export const wetsuit = t => (t > 25 ? 'Boardies / rashie' : t > 21 ? 'Springsuit' : t >= 18 ? '3/2 steamer' : t >= 15 ? '3/2 + booties' : '4/3 steamer');
 
 export function fmtClock(h) {
   const h24 = ((h % 24) + 24) % 24;

@@ -1,28 +1,30 @@
 // Open-Meteo fetching + 30-minute localStorage cache.
-// Both APIs are free and keyless. Times are requested in Australia/Sydney local
-// time so array index = hours since Sydney midnight of day 0.
+// Both APIs are free and keyless. Times are requested in the beach's REGION
+// local time so array index = hours since local midnight of day 0.
 
-import { TIMEZONE } from './beaches.js';
+import { regionOf } from './beaches.js';
 
 const CACHE_TTL = 30 * 60 * 1000; // 30 min
 const FORECAST_DAYS = 5;
+
+const tzOf = b => regionOf(b).tz;
 
 const marineUrl = b =>
   `https://marine-api.open-meteo.com/v1/marine?latitude=${b.lat}&longitude=${b.lon}` +
   `&hourly=swell_wave_height,swell_wave_direction,swell_wave_period,` +
   `secondary_swell_wave_height,secondary_swell_wave_direction,secondary_swell_wave_period,` +
   `sea_level_height_msl,sea_surface_temperature` +
-  `&forecast_days=${FORECAST_DAYS}&timezone=${encodeURIComponent(TIMEZONE)}`;
+  `&forecast_days=${FORECAST_DAYS}&timezone=${encodeURIComponent(tzOf(b))}`;
 
 const forecastUrl = b =>
   `https://api.open-meteo.com/v1/forecast?latitude=${b.lat}&longitude=${b.lon}` +
   `&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&daily=sunrise,sunset` +
-  `&forecast_days=${FORECAST_DAYS}&timezone=${encodeURIComponent(TIMEZONE)}&wind_speed_unit=kn`;
+  `&forecast_days=${FORECAST_DAYS}&timezone=${encodeURIComponent(tzOf(b))}&wind_speed_unit=kn`;
 
-// Current date/time in Sydney regardless of the visitor's timezone.
-export function sydneyNow() {
+// Current date/time in the given IANA timezone regardless of the visitor's.
+export function localNow(timeZone = 'Australia/Sydney') {
   const parts = new Intl.DateTimeFormat('en-AU', {
-    timeZone: TIMEZONE,
+    timeZone,
     year: 'numeric', month: 'numeric', day: 'numeric',
     hour: 'numeric', minute: 'numeric', hour12: false,
   }).formatToParts(new Date());
@@ -97,7 +99,7 @@ function assemble(beach, marine, forecast) {
     ss: parseHourFloat(forecast.daily.sunset[i]),
   }));
   const sstArr = fillNulls(mh.sea_surface_temperature, 18);
-  const iNow = Math.min(len - 1, Math.floor(sydneyNow().nowT));
+  const iNow = Math.min(len - 1, Math.floor(localNow(tzOf(beach)).nowT));
   return { beach, hours, sun, sst: sstArr[iNow] };
 }
 
@@ -124,7 +126,7 @@ export async function fetchSharks() {
 
 // Fetch (or serve cached) data for one beach.
 export async function fetchBeach(beach) {
-  const { dateKey } = sydneyNow();
+  const { dateKey } = localNow(tzOf(beach));
   const key = `dp-data-${beach.id}`;
   const cached = readCache(key, dateKey);
   if (cached) return { ...assemble(beach, cached.marine, cached.forecast), fetchedAt: cached.ts };

@@ -5,10 +5,14 @@
 // dirWidth: tolerance (°) around bestDir before exposure falls off
 // expoBase: how much open-ocean swell reaches the lineup (0–1)
 // cams: surfcam links, free/no-login ones first
+// tz drives all times for the region (API requests, NOW line, day boundaries).
+// sharks: whether our NSW SharkSmart/Dorsal pipeline covers the area.
 export const REGIONS = [
-  { id: 'sydney', name: 'Sydney',    sub: 'Eastern Suburbs & Northern Beaches' },
-  { id: 'byron',  name: 'Byron Bay', sub: 'Cape Byron & Tallow' },
+  { id: 'sydney', name: 'Sydney',    sub: 'Eastern Suburbs & Northern Beaches', tz: 'Australia/Sydney', sharks: true },
+  { id: 'byron',  name: 'Byron Bay', sub: 'Cape Byron & Tallow',                tz: 'Australia/Sydney', sharks: true },
+  { id: 'canggu', name: 'Canggu',    sub: 'Bali · Pererenan to Berawa',         tz: 'Asia/Makassar',    sharks: false },
 ];
+export const regionOf = beach => REGIONS.find(r => r.id === beach.region);
 
 const RANDWICK_CAMS = 'https://www.randwick.nsw.gov.au/facilities-and-recreation/explore-randwick-city/beach-cams';
 export const BEACHES = [
@@ -66,6 +70,27 @@ export const BEACHES = [
     cams: [
       { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/broken-head/5842041f4e65fad6a7708bf3' },
     ] },
+
+  // Canggu, Bali. The whole strip faces SW into relentless Indian Ocean
+  // groundswell; E–NE is offshore (glassy mornings, SE trades turn it side-shore
+  // by afternoon in the dry season).
+  { id: 'batubolong', name: 'Batu Bolong', region: 'canggu', lat: -8.6598, lon: 115.1300, facing: 225, bestDir: 225, dirWidth: 70, expoBase: 0.7, notes: "Old Man's — long, slow, forgiving peaks over reef; logger heaven, crowd factory",
+    cams: [
+      { label: 'Balicams (free)',      url: 'https://balicams.com/camera/batunolong' },
+      { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/old-mans-batu-bolong/605112930a374f33cf5f8f05' },
+    ] },
+  { id: 'berawa',     name: 'Berawa',      region: 'canggu', lat: -8.6683, lon: 115.1477, facing: 220, bestDir: 220, dirWidth: 70, expoBase: 0.9, notes: 'Punchy beachbreak peaks; the intermediate pick of the strip',
+    cams: [
+      { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/berawa-beach/6051139a7c51e500d72c538e' },
+    ] },
+  { id: 'echobeach',  name: 'Echo Beach',  region: 'canggu', lat: -8.6555, lon: 115.1225, facing: 230, bestDir: 225, dirWidth: 70, expoBase: 1.0, notes: 'The main act — powerful peaks and a long left over reef; handles size',
+    cams: [
+      { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/canggu/5842041f4e65fad6a7708d40' },
+    ] },
+  { id: 'pererenan',  name: 'Pererenan',   region: 'canggu', lat: -8.6510, lon: 115.1160, facing: 230, bestDir: 225, dirWidth: 70, expoBase: 1.0, notes: 'River-mouth peaks north of Echo; heavier, with more room to breathe',
+    cams: [
+      { label: 'Surfline (free, ads)', url: 'https://www.surfline.com/surf-report/pererenan/6269dc2c491aa9ad66235f52' },
+    ] },
 ];
 
 export const SKILL_NAMES = ['Beginner', 'Intermediate', 'Experienced'];
@@ -77,4 +102,3 @@ export const SKILLS = {
   Experienced:  { center: 2.2,  spread: 1.0, windMult: 0.85 },
 };
 
-export const TIMEZONE = 'Australia/Sydney';

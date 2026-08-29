@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { BEACHES, REGIONS, SKILL_NAMES, SKILLS } from './beaches.js';
 import { buildModel, compass, fmtClock, scoreLabel, tideStage, wetsuit } from './engine.js';
-import { fetchBeach, fetchSharks, sydneyNow } from './api.js';
+import { fetchBeach, fetchSharks, localNow } from './api.js';
 
 const LABEL_COLOR = {
   Flat: 'var(--dp-flat)', Poor: 'var(--dp-poor)', Fair: 'var(--dp-amber)',
@@ -635,17 +635,18 @@ export default function App() {
     return m;
   }, [sharks]);
 
+  const activeRegion = REGIONS.find(r => r.id === region);
   const ready = regionBeaches.filter(b => data[b.id]?.status === 'ok');
   const model = useMemo(() => {
     if (!ready.length) return null;
-    const { nowT, baseDate } = sydneyNow();
+    const { nowT, baseDate } = localNow(activeRegion.tz);
     return buildModel(ready.map(b => data[b.id].dataset), skill, nowT, baseDate);
   }, [data, skill, region, ready.length, Math.floor(Date.now() / 60_000)]);
 
   const ranked = model
     ? [...model.beaches].sort((a, b) => (favs.includes(b.id) - favs.includes(a.id)) || (b.score - a.score))
     : [];
-  const { nowT } = sydneyNow();
+  const { nowT } = localNow(activeRegion.tz);
 
   // Desktop: favourites expand into full panels at the top (top 2 by score if nothing pinned).
   const featured = isDesktop
@@ -707,7 +708,7 @@ export default function App() {
           </div>
         )}
 
-        {sharks && <SharkWatch sharks={sharks} beaches={regionBeaches} />}
+        {sharks && activeRegion.sharks && <SharkWatch sharks={sharks} beaches={regionBeaches} />}
 
         {featured.length > 0 && (
           <section className="dp-panels">
